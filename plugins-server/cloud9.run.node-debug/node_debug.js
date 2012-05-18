@@ -16,7 +16,7 @@ var exports = module.exports = function setup(options, imports, register) {
         if (err)
             return register(err);
 
-        pm.addRunner("node-debug", exports.factory(vfs, projectDir));
+        pm.addRunner("node-debug", exports.factory(vfs, projectDir, options.nodePath));
 
         register(null, {
             "run-node-debug": {}
@@ -25,7 +25,7 @@ var exports = module.exports = function setup(options, imports, register) {
 
 };
 
-exports.factory = function(vfs, workspaceDir) {
+exports.factory = function(vfs, workspaceDir, nodePath) {
     return function(args, eventEmitter, eventName) {
         var cwd = args.cwd || workspaceDir;
         return new Runner(vfs, {
@@ -37,7 +37,8 @@ exports.factory = function(vfs, workspaceDir) {
             breakOnStart: args.breakOnStart,
             extra: args.extra,
             eventEmitter: eventEmitter,
-            eventName: eventName
+            eventName: eventName,
+            nodePath: nodePath
         });
     };
 };

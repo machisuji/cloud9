@@ -15,7 +15,7 @@ var exports = module.exports = function setup(options, imports, register) {
         if (err)
             return register(err);
 
-        pm.addRunner("node", exports.factory(vfs, projectDir));
+        pm.addRunner("node", exports.factory(vfs, projectDir, options.nodePath));
 
         register(null, {
             "run-node": {}
@@ -23,7 +23,7 @@ var exports = module.exports = function setup(options, imports, register) {
     });
 };
 
-exports.factory = function(vfs, workspaceDir) {
+exports.factory = function(vfs, workspaceDir, nodePath) {
     return function(args, eventEmitter, eventName) {
         var cwd = args.cwd || workspaceDir;
 
@@ -35,7 +35,8 @@ exports.factory = function(vfs, workspaceDir) {
             encoding: args.encoding,
             extra: args.extra,
             eventEmitter: eventEmitter,
-            eventName: eventName
+            eventName: eventName,
+            nodePath: nodePath
         });
     };
 };
@@ -45,6 +46,7 @@ var Runner = exports.Runner = function(vfs, options) {
     this.uid = options.uid;
     this.file = options.file;
     this.extra = options.extra;
+    this.nodePath = options.nodePath || process.execPath;
 
     this.scriptArgs = options.args || [];
     this.nodeArgs = [];
@@ -60,7 +62,7 @@ util.inherits(Runner, ShellRunner);
     this.name = "node";
 
     this.createChild = function(callback) {
-        this.command = process.execPath;
+        this.command = this.nodePath;
         this.args = this.nodeArgs.concat(this.file, this.scriptArgs);
         ShellRunner.prototype.createChild.call(this, callback);
     };

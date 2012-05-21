@@ -6,22 +6,25 @@
  */
 
 var Plugin = require("../cloud9.core/plugin");
+var fsnode = require("vfs/nodefs-adapter");
 var util = require("util");
-var fs = require("fs");
 
 var name = "npm-runtime";
 var ProcessManager;
 var EventBus;
+var VFS;
 
 module.exports = function setup(options, imports, register) {
     ProcessManager = imports["process-manager"];
     EventBus = imports.eventbus;
+    VFS = imports.vfs;
     imports.ide.register(name, NpmRuntimePlugin, register);
 };
 
 var NpmRuntimePlugin = function(ide, workspace) {
     this.ide = ide;
     this.pm = ProcessManager;
+    this.fs = fsnode(VFS);
     this.eventbus = EventBus;
     this.workspace = workspace;
     this.workspaceId = workspace.workspaceId;
@@ -103,6 +106,7 @@ util.inherits(NpmRuntimePlugin, Plugin);
 
     this.searchForModuleHook = function(command, cb) {
         var baseDir = this.ide.workspaceDir + "/node_modules";
+        var fs = this.fs;
 
         function searchModules(dirs, it) {
             if (!dirs[it])

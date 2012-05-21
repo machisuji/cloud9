@@ -10,7 +10,7 @@ var exports = module.exports = function setup(options, imports, register) {
         if (err)
             return register(err);
 
-       pm.addRunner("run-npm", exports.factory(imports.vfs, projectDir));
+       pm.addRunner("run-npm", exports.factory(imports.vfs, projectDir, options.nodePath));
 
        register(null, {
            "run-run-npm": {}
@@ -18,14 +18,14 @@ var exports = module.exports = function setup(options, imports, register) {
    });
 };
 
-exports.factory = function(vfs, projectDir) {
+exports.factory = function(vfs, projectDir, nodePath) {
     return function(args, eventEmitter, eventName) {
         var cwd = args.cwd || projectDir;
-        return new Runner(vfs, args.file, args.args, cwd, args.env, args.extra, eventEmitter, eventName);
+        return new Runner(vfs, args.file, args.args, cwd, args.env, args.extra, nodePath, eventEmitter, eventName);
     };
 };
 
-var Runner = exports.Runner = function(vfs, file, args, cwd, env, extra, eventEmitter, eventName) {
+var Runner = exports.Runner = function(vfs, file, args, cwd, env, extra, nodePath, eventEmitter, eventName) {
     this.file = file;
     this.extra = extra;
 
@@ -34,7 +34,7 @@ var Runner = exports.Runner = function(vfs, file, args, cwd, env, extra, eventEm
 
     env = env || {};
     ShellRunner.call(this, vfs, {
-        command: process.execPath,
+        command: nodePath || process.execPath,
         args: [],
         cwd: cwd,
         env: env,

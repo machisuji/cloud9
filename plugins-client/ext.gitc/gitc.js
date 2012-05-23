@@ -11,7 +11,6 @@ var ext     = require("core/ext");
 var ide     = require("core/ide");
 var menus = require("ext/menus/menus");
 var editors = require("ext/editors/editors");
-var BlameJS = require("ext/gitblame/blamejs");
 var util    = require("core/util");
 
 module.exports = ext.register("ext/gitc/gitc", {

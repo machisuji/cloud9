@@ -131,8 +131,7 @@ var config = {
                     "ext/colorpicker/colorpicker",
                     "ext/revisions/revisions",
                     "ext/language/liveinspect",
-                    "ext/gitc/gitc",
-                    "ext/gittools/gittools"
+                    "ext/gitc/gitc"
                     //"ext/splitview/splitview"
                     //"ext/minimap/minimap"
                     //"ext/acebugs/acebugs"

@@ -1,0 +1,14 @@
+{
+    "name": "ext.gitc",
+    "version": "0.0.1",
+    "main": "gitc-ext.js",
+    "private": true,
+    "plugin": {
+        "provides": [
+            "ext.gitc"
+        ],
+        "consumes": [
+            "client-plugins"
+        ]
+    }
+}

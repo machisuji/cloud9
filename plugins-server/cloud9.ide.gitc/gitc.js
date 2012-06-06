@@ -21,7 +21,7 @@ var GitPlugin = function(ide, workspace) {
     this.pm = ProcessManager;
     this.eventbus = EventBus;
     this.workspaceId = workspace.workspaceId;
-    this.channel = this.workspaceId + "::git";
+    this.channel = this.workspaceId + "::gitc";
 
     this.hooks = ["command"];
     this.name = "gitc";
@@ -54,7 +54,7 @@ util.inherits(GitPlugin, Plugin);
             if (msg.type == "shell-data") {
                 console.log("msg: " + msg.data);
             }
-            self.ide.broadcast(JSON.stringify(msg), self.name);
+            //self.ide.broadcast(JSON.stringify(msg), self.name);
         });
     };
 
@@ -65,7 +65,7 @@ util.inherits(GitPlugin, Plugin);
         if (cmd !== "gitc")
             return false;
 
-        console.log("GitC command !!!");
+        console.log("gitc running 'git " + message.argv.slice(1) + "'");
 
         if (typeof message.protocol == "undefined")
             message.protocol = "client";

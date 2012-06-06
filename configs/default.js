@@ -165,6 +165,7 @@ var config = {
             "./cloud9.ide.auth",
             "./cloud9.ide.blame",
             "./cloud9.ide.git",
+            "./cloud9.ide.gitc",
             "./cloud9.ide.gittools",
             "./cloud9.ide.hg",
             "./cloud9.ide.npm",

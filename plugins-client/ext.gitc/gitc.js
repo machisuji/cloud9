@@ -1,7 +1,7 @@
 /**
- * Git Blame extension for the Cloud9 IDE client
+ * Gitc extension for the Cloud9 IDE client
  *
- * @copyright 2011, Ajax.org B.V.
+ * @copyright 2012
  * @license GPLv3 <http://www.gnu.org/licenses/gpl.txt>
  */
 
@@ -12,6 +12,8 @@ var ide     = require("core/ide");
 var menus = require("ext/menus/menus");
 var editors = require("ext/editors/editors");
 var util    = require("core/util");
+var GitcCommands = require("ext/gitc/gitccommands");
+
 
 module.exports = ext.register("ext/gitc/gitc", {
     name     : "gitc",
@@ -21,10 +23,12 @@ module.exports = ext.register("ext/gitc/gitc", {
     nodes    : [],
 
     init : function(amlNode){
-        
+        this.gitcCommands = new GitcCommands();
     },
 
     hook : function(){
+        this.init();
+
         var _self = this;
         
         menus.addItemByPath("Tools/gitc", new apf.item({
@@ -33,6 +37,8 @@ module.exports = ext.register("ext/gitc/gitc", {
                 alert("Hallo Extension!");
             }
         }), 500);
+
+        ide.addEventListener("socketMessage", this.gitcCommands.onMessage.bind(this.gitcCommands));
     },
 
     enable : function(){
@@ -55,5 +61,6 @@ module.exports = ext.register("ext/gitc/gitc", {
         });
         this.nodes = [];
     }
+
 });
 });

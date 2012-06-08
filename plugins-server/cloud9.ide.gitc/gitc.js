@@ -12,10 +12,10 @@ var EventBus;
 module.exports = function setup(options, imports, register) {
     ProcessManager = imports["process-manager"];
     EventBus = imports.eventbus;
-    imports.ide.register(name, GitPlugin, register);
+    imports.ide.register(name, GitcPlugin, register);
 };
 
-var GitPlugin = function(ide, workspace) {
+var GitcPlugin = function(ide, workspace) {
     Plugin.call(this, ide, workspace);
 
     this.pm = ProcessManager;
@@ -35,26 +35,28 @@ var GitPlugin = function(ide, workspace) {
     this.processCount = 0;
 };
 
-util.inherits(GitPlugin, Plugin);
+util.inherits(GitcPlugin, Plugin);
 
 (function() {
 
     this.init = function() {
-        console.log("Init gitc");
 
         var self = this;
         this.eventbus.on(this.channel, function(msg) {
-            console.log("something's on the channel!");
-            if (msg.type == "shell-start")
+            if (msg.type == "shell-start") {
                 self.processCount += 1;
+                msg.type = "gitc-srt";
+            }
 
-            if (msg.type == "shell-exit")
+            if (msg.type == "shell-exit") {
                 self.processCount -= 1;
+                msg.type = "gitc-ext";
+            }
 
             if (msg.type == "shell-data") {
-                console.log("msg: " + msg.data);
+                msg.type = "gitc-dt";
             }
-            //self.ide.broadcast(JSON.stringify(msg), self.name);
+            self.ide.broadcast(JSON.stringify(msg), self.name);
         });
     };
 
@@ -62,10 +64,9 @@ util.inherits(GitPlugin, Plugin);
         var self = this;
         var cmd = message.command ? message.command.toLowerCase() : "";
 
-        if (cmd !== "gitc")
+        if (cmd !== "gitc") {
             return false;
-
-        console.log("gitc running 'git " + message.argv.slice(1) + "'");
+        }
 
         if (typeof message.protocol == "undefined")
             message.protocol = "client";
@@ -96,4 +97,4 @@ util.inherits(GitPlugin, Plugin);
         return this.processCount === 0;
     };
 
-}).call(GitPlugin.prototype);
+}).call(GitcPlugin.prototype);

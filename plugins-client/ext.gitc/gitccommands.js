@@ -14,6 +14,7 @@ module.exports = (function() {
     function GitCommands() {
         this.command_id_tracer = 1;
         this.command_to_callback_map = {};
+        this.pid_to_message_map = {};
     }
 
     GitCommands.prototype = {
@@ -61,18 +62,44 @@ module.exports = (function() {
         onMessage : function(e) {
             var msg = e.message;
 
-            if(msg.type != "gitc-dt")
-                return;      
-
-            console.log("gitc result at pid " +msg.pid+ ": " + msg.data);
-
-            //TODO collect all outputs with same pid
-            var command = this.command_to_callback_map[msg.extra.command_id];
-            if (command) {
-                callback(msg.data, msg.stream);
+            if(msg.type == "gitc-srt") {
+                this.pid_to_message_map[msg.pid] = {data: "", stream: msg.stream};
             }
 
+            if(msg.type == "gitc-dt"){
+            //TODO collect all outputs with same pid
+                console.log("gitc result at pid " +msg.pid+ ": " + msg.data);
+                this.pid_to_message_map[msg.pid].data += msg.data;               
+            }      
+
+            if(msg.type == "gitc-ext") {
+                var command = this.command_to_callback_map[msg.extra.command_id];
+                var output = this.pid_to_message_map[msg.pid];
+                if (command) {
+                    callback(output.data, output.stream);
+                }
+                delete this.command_to_callback_map[msg.extra.command_id];
+                delete this.pid_to_message_map[msg.pid];
+            }
+
+        },
+
+        getChangedFiles : function() {
+            this.send("git diff", returnChangedFiles);
+        },
+
+        getChangesInFile : function(filename) {
+            this.send("git diff " + filename, returnChangesInFile);
+        },
+
+        returnChangedFiles : function(output, stream) {
+
+        },
+
+        returnChangesInFile : function(output, stream) {
+
         }
+
     };
 
     return GitCommands;

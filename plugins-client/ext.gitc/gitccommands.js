@@ -63,20 +63,19 @@ module.exports = (function() {
             var msg = e.message;
 
             if(msg.type == "gitc-srt") {
-                this.pid_to_message_map[msg.pid] = {data: "", stream: msg.stream};
+                this.pid_to_message_map[msg.pid] = {data: ""};
             }
 
             if(msg.type == "gitc-dt"){
-            //TODO collect all outputs with same pid
-                console.log("gitc result at pid " +msg.pid+ ": " + msg.data);
-                this.pid_to_message_map[msg.pid].data += msg.data;               
+                this.pid_to_message_map[msg.pid].stream = msg.stream;
+                this.pid_to_message_map[msg.pid].data += msg.data;
             }      
 
             if(msg.type == "gitc-ext") {
                 var command = this.command_to_callback_map[msg.extra.command_id];
                 var output = this.pid_to_message_map[msg.pid];
                 if (command) {
-                    callback(output.data, output.stream);
+                    command(output.data, output.stream);
                 }
                 delete this.command_to_callback_map[msg.extra.command_id];
                 delete this.pid_to_message_map[msg.pid];

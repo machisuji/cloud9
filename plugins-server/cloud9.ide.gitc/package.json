@@ -1,0 +1,16 @@
+{
+    "name": "cloud9.ide.gitc",
+    "version": "0.0.1",
+
+    "main": "./gitc.js",
+    "private": true,
+
+    "plugin": {
+        "consumes": [
+            "ide",
+            "process-manager",
+            "run-shell",
+            "eventbus"
+        ]
+    }
+}

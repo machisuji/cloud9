@@ -34,7 +34,8 @@ module.exports = ext.register("ext/gitc/gitc", {
         menus.addItemByPath("Tools/gitc", new apf.item({
             // @TODO: Support more CVSs? Just "Blame this File"
             onclick : function(){
-                alert("Hallo Extension!");
+                //alert("Hallo Extension!");
+                _self.gitcCommands.getChangedFiles(function(out) {console.log(out);});
             }
         }), 500);
 

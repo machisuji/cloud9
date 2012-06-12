@@ -1,0 +1,20 @@
+.ace_marker-layer .gitc-removed {
+  background: rgba(255, 0, 0, 0.15);
+  left: 0 !important;
+  position: absolute;
+  width: 100% !important;
+}
+
+.ace_marker-layer .gitc-added {
+  background: rgba(0, 255, 0, 0.15);
+  left: 0 !important;
+  position: absolute;
+  width: 100% !important;
+}
+
+.ace_marker-layer .gitc-changed {
+  background: rgba(0, 0, 255, 0.15);
+  left: 0 !important;
+  position: absolute;
+  width: 100% !important;
+}

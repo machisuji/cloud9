@@ -12,6 +12,9 @@ var ide     = require("core/ide");
 var menus = require("ext/menus/menus");
 var editors = require("ext/editors/editors");
 var util    = require("core/util");
+var css = require("text!ext/gitc/gitc.css");
+var Range = require("ace/range").Range;
+
 
 module.exports = ext.register("ext/gitc/gitc", {
     name     : "gitc",
@@ -19,23 +22,55 @@ module.exports = ext.register("ext/gitc/gitc", {
     alone    : true,
     type     : ext.GENERAL,
     nodes    : [],
+    css      : css,
 
     init : function(amlNode){
-        
+        apf.importCssString((this.css || ""));
     },
 
     hook : function(){
         var _self = this;
         
-        menus.addItemByPath("Tools/gitc", new apf.item({
+        menus.addItemByPath("Tools/gi tc", new apf.item({
             // @TODO: Support more CVSs? Just "Blame this File"
             onclick : function(){
-                alert("Hallo Extension!");
+                
+                var Range = require("ace/range").Range;
+                var editor = editors.currentEditor.amlEditor.$editor;
+                
+                _self.markLineAsRemoved(38);
+                _self.markLineAsAdded(39);
+                _self.markLineAsChanged(40);
+                
+                var wordRange = new Range(38, 20, 38, 27);
+                editor.getSession().addMarker(wordRange, "ace_active_line", "text");
+                
+                editor.getSession().setAnnotations([{
+                  row: 38,
+                  text: "bgRange",
+                  type: "error"
+                }]);
+                
+                var line = editor.getSession().getLine();
+                //var ar = editor.getSession().getAWordRange(37, 39);
+                
+                
+                
+                
+                //editor.getSession().on('change', function(e) { alert(e.data.text) });
+                //var first = editor.getFirstVisibleRow();
+                //var last = editor.getLastVisibleRow();
+                
+                
+                //alert(theme);
             }
         }), 500);
+        this.init();
     },
 
     enable : function(){
+        
+        
         this.nodes.each(function(item){
             item.enable();
         });
@@ -54,6 +89,21 @@ module.exports = ext.register("ext/gitc/gitc", {
             item.destroy(true, true);
         });
         this.nodes = [];
+    },
+    
+    markLineAsRemoved : function(line) {
+		var editor = editors.currentEditor.amlEditor.$editor;
+        editor.getSession().addMarker(new Range(line, 1, line, 10), "gitc-removed", "background");
+    },
+    
+    markLineAsAdded : function(line) {
+		var editor = editors.currentEditor.amlEditor.$editor;
+        editor.getSession().addMarker(new Range(line, 1, line, 10), "gitc-added", "background");
+    },
+    
+    markLineAsChanged : function(line) {
+		var editor = editors.currentEditor.amlEditor.$editor;
+        editor.getSession().addMarker(new Range(line, 1, line, 10), "gitc-changed", "background");
     }
 });
 });

@@ -15,11 +15,12 @@ var util    = require("core/util");
 var css = require("text!ext/gitc/gitc.css");
 var Range = require("ace/range").Range;
 var GitcCommands = require("ext/gitc/gitccommands");
+var gitcTree = require("ext/gitc/tree");
 
 
 module.exports = ext.register("ext/gitc/gitc", {
     name     : "gitc",
-    dev      : "wir",
+    dev      : "Markus Kahl, Stephanie Platz, Patrick Schilf",
     alone    : true,
     type     : ext.GENERAL,
     nodes    : [],

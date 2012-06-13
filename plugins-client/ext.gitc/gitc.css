@@ -18,3 +18,7 @@
   position: absolute;
   width: 100% !important;
 }
+
+.mnubtn.gitc .icon {
+  background-image:url(static/ext/gitc/images/gitc.png);
+}

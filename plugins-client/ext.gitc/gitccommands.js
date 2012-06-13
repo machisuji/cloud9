@@ -14,8 +14,7 @@ module.exports = (function() {
     
     function GitCommands() {
         this.command_id_tracer = 1;
-        this.command_to_inner_callback_map = {};
-        this.command_to_outer_callback_map = {};
+        this.command_to_callback_map = {};
         this.pid_to_message_map = {};
         this.git_parser = new GitParser();
     }
@@ -30,8 +29,7 @@ module.exports = (function() {
          *          command is caught. The callback will get the output as the first argument
          *          and the stream ("stdout", "stderr") as second.
          */
-         //TODO find better way than to use inner and outer callback...
-        send : function(command, callback_inner, callback_outer) {
+        send : function(command, callback) {
             if(!command)
                 return; //no command
 
@@ -59,8 +57,7 @@ module.exports = (function() {
 
             ide.send(data);
 
-            this.command_to_inner_callback_map[this.command_id_tracer] = callback_inner;
-            this.command_to_outer_callback_map[this.command_id_tracer] = callback_outer;
+            this.command_to_callback_map[this.command_id_tracer] = callback;
             return this.command_id_tracer++;
         },
 
@@ -77,36 +74,16 @@ module.exports = (function() {
             }      
 
             if(msg.type == "gitc-ext") {
-                var callback = this.command_to_inner_callback_map[msg.extra.command_id];
-                var outer_callback = this.command_to_outer_callback_map[msg.extra.command_id];
+                var callback = this.command_to_callback_map[msg.extra.command_id];
                 var output = this.pid_to_message_map[msg.pid];
                 if (callback) {
-                    callback(output.data, output.stream, outer_callback);
+                    callback(output.data, output.stream, this.git_parser);
                 }
-                delete this.command_to_inner_callback_map[msg.extra.command_id];
-                delete this.command_to_outer_callback_map[msg.extra.command_id];
+                delete this.command_to_callback_map[msg.extra.command_id];
                 delete this.pid_to_message_map[msg.pid];
             }
 
-        },
-
-        /**
-         * Sends 'git status -s' command and returns the changed files to callback.
-         * 
-         * @param {function} callback A function that will be executed when the output of the 
-         *          command is caught and parsed.
-         */
-        getChangedFiles : function(callback) {
-            var id = this.send("status -s", this.git_parser.parseShortStatus, callback);
-        },
-
-        getChangesInFile : function(filename, callback) {
-            //diff -> unstaged changes; diff --cached -> staged changes; 
-            //git diff HEAD --> all staged or unstaged changes
-            this.send("diff " + filename, this.git_parser.parseDiffForChangesInFile, callback);
         }
-
-
 
     };
 

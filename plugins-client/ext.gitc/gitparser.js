@@ -9,10 +9,16 @@ define(function(require, exports, module) {
 module.exports = (function() {
     
     function GitDiffParser() {
+        var _self =this;
     }
 
     GitDiffParser.prototype = {
 
+        
+        /*
+         * Returns the changed files found in the output of the 'git status -s' 
+         * command and returns the changed files.
+         */
         parseShortStatus : function(status, stream, callback) {
 
             // git-status man:
@@ -42,11 +48,11 @@ module.exports = (function() {
 
             var key_map = {A: 'added', D: 'deleted', M: 'modified', R: 'renamed', C: 'copied', U: 'unmerged'};
 
-            var result = { staging_area: {added: [], deleted: [], modified: [], renamed: [], copied: [], unmerged: []},
+            var files = { staging_area: {added: [], deleted: [], modified: [], renamed: [], copied: [], unmerged: []},
                            working_dir : {added: [], deleted: [], modified: [], renamed: [], copied: [], unmerged: []} };
 
             if(stream == "stderr"){
-                return result;
+                return undefined;
             }
 
             var files = status.split("\n"); files.pop();
@@ -56,27 +62,75 @@ module.exports = (function() {
                 file = files[i];
 
                 if(file[0] != ' ' && file[0] != '?') {
-                    result.staging_area[key_map[file[0]]].push(file.slice(3,file.length));
+                    files.staging_area[key_map[file[0]]].push(file.slice(3,file.length));
                 }
                 if(file[1] != ' ') {
                     if(file[1] == '?'){ //untracked means that is added on working dir side
-                        result.working_dir.added.push(file.slice(3,file.length));
+                        files.working_dir.added.push(file.slice(3,file.length));
 
                     } else {
-                        result.working_dir[key_map[file[1]]].push(file.slice(3,file.length));
+                        files.working_dir[key_map[file[1]]].push(file.slice(3,file.length));
                     }
                 }
             }
 
             if(callback) {
-                callback(result);
+                callback(files);
             }
 
-            return result;
+            return files;
         },
 
-        parseDiffForChangesInFile : function(diff, stream) {
+        /*
+         * Returns the chunks found in the output of either the 
+         * 'git diff' for unstaged changes,
+         * 'git diff --cached' for staged changes or 
+         * 'git diff HEAD' for all staged or unstaged changes.
+         */
+        parseDiff : function(diff, stream) {
+            var files = [];
 
+            if(stream == "stderr"){
+                return result;
+            }
+
+            //separate diff for each contained file
+            var diffs = diff.split("diff --git ");
+            diffs.shift(); // Omit leading empty field
+
+            for(var i=0; i < diffs.length; i++) {
+                var file = { name: {old: "", new: ""},
+                             diff_header: "",
+                             chunks: [] };
+
+                //split file info from chunks
+                var chunks = diff[i].split("@@");
+                file.diff_header = chunks[0];
+                var file_info = chunks[0].split("\n");
+                chunks.shift();
+
+                file.name.old = file_info[0].split(\n)[2].slice(5,file.length);
+                file.name.new = file_info[0].split(\n)[3].slice(5,file.length);
+
+                //parse each single chunk
+                for(var j=0; j < chunks.length; j+=2) {
+                    file.chunks.push("@@" + this.parseChunk(chunks[j] + "@@", chunks[j+1]));
+                }
+
+                files.push(file);
+            }
+
+            return files;
+        },
+
+        parseChunk : function(header, chunk_text) {
+            var chunk = {header: header,
+                         text: text,
+                         }
+
+            var m = header.match(/@@ \-(\d+),(\d+)? \+(\d+),(\d+)? @@/);
+            var start_old = parseInt(m[1]);
+            var start_new = parseInt(m[3])
         }
         
     };

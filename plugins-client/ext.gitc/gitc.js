@@ -35,8 +35,7 @@ module.exports = ext.register("ext/gitc/gitc", {
 
         var _self = this;
         
-        menus.addItemByPath("Tools/gi tc", new apf.item({
-            // @TODO: Support more CVSs? Just "Blame this File"
+        menus.addItemByPath("Tools/gitc", new apf.item({
             onclick : function(){
 
                 alert("Hallo Extension!");

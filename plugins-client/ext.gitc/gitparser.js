@@ -143,13 +143,15 @@ module.exports = (function() {
             var lines = chunk_text.split("\n");
             for(var i=0; i<lines.length; i++) {
                 var current_line = lines[i];
+                if(current_line == "") {
+                    continue;
+                }
                 if(current_line[0] == ' ') {
                     position_old++; position_new++;
                     continue;
                 }
                 var line = {content: current_line.slice(1,current_line.length)};
 
-                //TODO wrong count, one too high
                 if(current_line[0] == '+') {
                     line.status = 'added';
                     line.number_new = position_new;

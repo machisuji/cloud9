@@ -39,7 +39,8 @@ module.exports = ext.register("ext/gitc/gitc", {
             onclick : function(){
 
                 _self.gitcCommands.send("diff", function(out, stream, pars) {
-                    pars.parseDiff(out, stream);
+                    console.log(pars.parseDiff(out, stream));
+                    console.log("");
                 });
                 
                 var Range = require("ace/range").Range;

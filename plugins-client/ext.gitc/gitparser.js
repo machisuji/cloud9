@@ -95,7 +95,8 @@ module.exports = (function() {
             }
 
             //separate diff for each contained file
-            var diffs = diff.split("diff --git ");
+            diff = "\n" + diff;
+            var diffs = diff.split("\ndiff --git");
             diffs.shift(); // Omit leading empty field
 
             for(var i=0; i < diffs.length; i++) {
@@ -104,17 +105,24 @@ module.exports = (function() {
                              chunks: [] };
 
                 //split file info from chunks
-                var chunks = diff[i].split("@@");
-                file.diff_header = chunks[0];
+                var chunks = diffs[i].split("\n@@");
+                file.diff_header = "diff --git" + chunks[0]; //reappend prefix
                 var file_info = chunks[0].split("\n");
                 chunks.shift();
 
-                file.name.old = file_info[0].split(\n)[2].slice(5,file.length);
-                file.name.new = file_info[0].split(\n)[3].slice(5,file.length);
+                file.name.old = file_info[2].slice(5,file.length);
+                file.name.new = file_info[3].slice(5,file.length);
 
                 //parse each single chunk
-                for(var j=0; j < chunks.length; j+=2) {
-                    file.chunks.push("@@" + this.parseChunk(chunks[j] + "@@", chunks[j+1]));
+                for(var j=0; j < chunks.length; j++) {
+                    var chunk = "@@" + chunks[j] //reappend prefix
+
+                    //separate header from diff text
+                    var header = chunk.match(/^@@.*@@/)[0];
+                    var first_line_end = chunk.search("\n");
+                    var text = chunk.slice(first_line_end+1,chunk.length);
+
+                    file.chunks.push(this.parseChunk(header, text));
                 }
 
                 files.push(file);
@@ -125,12 +133,38 @@ module.exports = (function() {
 
         parseChunk : function(header, chunk_text) {
             var chunk = {header: header,
-                         text: text,
-                         }
+                         text: chunk_text,
+                         lines: []}
 
-            var m = header.match(/@@ \-(\d+),(\d+)? \+(\d+),(\d+)? @@/);
-            var start_old = parseInt(m[1]);
-            var start_new = parseInt(m[3])
+            var h = header.match(/@@ \-(\d+),(\d+)? \+(\d+),(\d+)? @@/);
+            var position_old = parseInt(h[1]);
+            var position_new = parseInt(h[3]);
+
+            var lines = chunk_text.split("\n");
+            for(var i=0; i<lines.length; i++) {
+                var current_line = lines[i];
+                if(current_line[0] == ' ') {
+                    position_old++; position_new++;
+                    continue;
+                }
+                var line = {content: current_line.slice(1,current_line.length)};
+
+                //TODO wrong count, one too high
+                if(current_line[0] == '+') {
+                    line.status = 'added';
+                    line.number_new = position_new;
+                    position_new++;
+                } else if(current_line[0] == '-') {
+                    line.status = 'deleted';
+                    line.number_new = position_new;
+                    line.number_old = position_old;
+                    position_old++;
+                }
+
+                chunk.lines.push(line);
+
+            }
+            return chunk;
         }
         
     };

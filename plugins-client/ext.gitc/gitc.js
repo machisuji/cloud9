@@ -38,7 +38,9 @@ module.exports = ext.register("ext/gitc/gitc", {
         menus.addItemByPath("Tools/gitc", new apf.item({
             onclick : function(){
 
-                alert("Hallo Extension!");
+                _self.gitcCommands.send("diff", function(out, stream, pars) {
+                    pars.parseDiff(out, stream);
+                });
                 
                 var Range = require("ace/range").Range;
                 var editor = editors.currentEditor.amlEditor.$editor;

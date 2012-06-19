@@ -34,13 +34,30 @@
   width: 5px !important;
 }
 
-.ace_gutter-cell .gitc-tooltip {
-    background: rgb(255, 0, 0);
-    height: 18px;
+.gitc-tooltip {
+	background: #ff0;
+    display: none;
+	height: 18px;
     padding: 2px;
     position: absolute;
     text-align: center;
     width: 150px;
+}
+
+.ace_gutter-cell:hover .gitc-tooltip {
+    display: block;
+}
+
+.gitc-added .gitc-tooltip {
+    background: rgb(0, 255, 0);
+}
+
+.gitc-changed .gitc-tooltip {
+	background: rgb(0, 0, 255);
+}
+
+.gitc-removed .gitc-tooltip {
+	background: rgb(255, 0, 0);
 }
 
 .ace_gutter {

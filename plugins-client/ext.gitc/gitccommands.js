@@ -82,7 +82,6 @@ module.exports = (function() {
                 delete this.command_to_callback_map[msg.extra.command_id];
                 delete this.pid_to_message_map[msg.pid];
             }
-
         }
 
     };

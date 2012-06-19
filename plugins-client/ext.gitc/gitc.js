@@ -15,6 +15,7 @@ var util    = require("core/util");
 var css = require("text!ext/gitc/gitc.css");
 var Range = require("ace/range").Range;
 var GitcCommands = require("ext/gitc/gitccommands");
+var GitEditorVis = require("ext/gitc/gitceditorvis");
 
 
 module.exports = ext.register("ext/gitc/gitc", {
@@ -28,6 +29,7 @@ module.exports = ext.register("ext/gitc/gitc", {
     init : function(amlNode){
         apf.importCssString((this.css || ""));
         this.gitcCommands = new GitcCommands();
+        this.gitEditorVis = new GitEditorVis(this.gitcCommands);
     },
 
     hook : function(){
@@ -45,7 +47,7 @@ module.exports = ext.register("ext/gitc/gitc", {
                 
                 var Range = require("ace/range").Range;
                 var editor = editors.currentEditor.amlEditor.$editor;
-                
+
                 _self.markLineAsRemoved(38);
                 _self.markLineAsAdded(39);
                 _self.markLineAsChanged(40);
@@ -76,6 +78,9 @@ module.exports = ext.register("ext/gitc/gitc", {
         this.init();
 
         ide.addEventListener("socketMessage", this.gitcCommands.onMessage.bind(this.gitcCommands));
+
+        tabEditors.addEventListener("beforeswitch", this.gitEditorVis.onTabSwitch.bind(this.gitEditorVis));
+
     },
 
     enable : function(){

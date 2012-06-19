@@ -14,22 +14,22 @@ module.exports = (function() {
         this.gitcCommands = gitccommands;
         this.currentEditor = undefined;
         this.changes = undefined;
-        this.annotations = [];
+        this.annotations = {};
     }
 
     GitEditorVis.prototype = {
         
         markGutterLine : function(annotation) {
-            this.annotations.push(annotation);
+			var session = this.currentEditor.getSession();
             
-            if (annotation.type == "gitc-added") {
-                this.currentEditor.getSession().addMarker(new Range(annotation.row, 1, annotation.row, 10), "gitc-added", "background");
+            if (annotation.type == "added") {
+                //this.currentEditor.getSession().addMarker(new Range(annotation.row, 1, annotation.row, 10), "gitc-added", "background");
                 this.currentEditor.renderer.addGutterDecoration(annotation.row, "gitc-added");
-            } else if (annotation.type == "gitc-changed") {
-                this.currentEditor.getSession().addMarker(new Range(annotation.row, 1, annotation.row, 10), "gitc-changed", "background");
+            } else if (annotation.type == "changed") {
+                //this.currentEditor.getSession().addMarker(new Range(annotation.row, 1, annotation.row, 10), "gitc-changed", "background");
                 this.currentEditor.renderer.addGutterDecoration(annotation.row, "gitc-changed");
-            } else if (annotation.type == "gitc-removed") {
-                this.currentEditor.getSession().addMarker(new Range(annotation.row, 1, annotation.row, 10), "gitc-removed", "background");
+            } else if (annotation.type == "deleted") {
+                //this.currentEditor.getSession().addMarker(new Range(annotation.row, 1, annotation.row, 10), "gitc-removed", "background");
                 this.currentEditor.renderer.addGutterDecoration(annotation.row, "gitc-removed");
             };
             
@@ -43,7 +43,7 @@ module.exports = (function() {
             type: type,
             text: msg,
             tooltip: this.createTooltip(msg)
-          };  
+          };
           
           return annotation;
         },
@@ -55,6 +55,13 @@ module.exports = (function() {
           
           return tooltip;
         },
+        
+        /*clearMarkers : function() {
+            var ids = this.currentEditor.getSession().getMarkers(false);
+            for (var i = 0; i < ids.length; i++) {
+                this.currentEditor.getSession().removeMarker(ids[i]);
+            }
+        },*/
 
     	onTabSwitch : function(e){
             var closed_file = e.currentTarget.$activepage? this.getFilePath(e.currentTarget.$activepage.id) : undefined;
@@ -78,19 +85,47 @@ module.exports = (function() {
             this.gitcCommands.send("diff --cached " + opened_file, this.addStagedChanges.bind(this));
             //maintain gutter tooltips
             this.currentEditor.renderer.scrollBar.addEventListener("scroll", this.onScroll.bind(this));
+            //this.clearMarkers();
 			this.markGutterLine(this.createAnnotation(40, "gitc-removed", "Blub"));
+        },
+        
+        markChanges : function(changes) {
+			for (var k = 0; k < changes.length; k++) {
+				var change = changes[k];
+				for (var i = 0; i < change.chunks.length; i++) {
+					var chunk = change.chunks[i];
+					for (var j = 0; j < chunk.lines.length; j++) {
+						var line = chunk.lines[j];
+						var annotation = this.createAnnotation(line.number_new-1, line.status, line.content);
+						var existingAnnotation = this.annotations[(line.number_new-1).toString()];
+						if (existingAnnotation && existingAnnotation.type == "deleted" && annotation.type == "added") {
+							annotation = this.createAnnotation(line.number_new-1, "changed", line.content)
+						}
+						this.annotations[annotation.row.toString()] = annotation;
+					}
+				}
+			}
+			for (var i in this.annotations) {
+				this.markGutterLine(this.annotations[i]);
+			}
+        },
+        
+        markStagedChanges : function(changes) {
+            this.markChanges(changes);
+        },
+        
+        markUnstagedChanges : function(changes) {
+            this.markChanges(changes);
         },
 
         addUnstagedChanges : function(diff_output, stream, parser) {
             var changes = parser.parseDiff(diff_output, stream);
-            console.log(changes);
-            //TODO
+            this.markUnstagedChanges(changes);
         },
 
         addStagedChanges : function(diff_output, stream, parser) {
             var changes = parser.parseDiff(diff_output, stream);
-            console.log(changes);
-            //TODO
+            this.markStagedChanges(changes);
         },
 
         getFilePath : function(filePath) {
@@ -103,13 +138,12 @@ module.exports = (function() {
         },
 
 		onScroll : function(e) {
-            for (var i = 0; i < this.annotations.length; i++) {
+            for (var i in this.annotations) {
     		    this.addTooltip(this.annotations[i]);
 			}
 		},
         
         addTooltip : function(annotation) {
-            console.log(annotation);
             var gutterLayer = document.getElementById('q11').children[2].children[1];
             var renderer = this.currentEditor.renderer;
             var firstLineIndex = renderer.getFirstVisibleRow();

@@ -9,7 +9,6 @@ define(function(require, exports, module) {
 module.exports = (function() {
     
     function GitDiffParser() {
-        var _self =this;
     }
 
     GitDiffParser.prototype = {
@@ -85,13 +84,14 @@ module.exports = (function() {
          * Returns the chunks found in the output of either the 
          * 'git diff' for unstaged changes,
          * 'git diff --cached' for staged changes or 
-         * 'git diff HEAD' for all staged or unstaged changes.
+         * 'git diff HEAD' for all staged or unstaged changes
+         * command.
          */
         parseDiff : function(diff, stream) {
             var files = [];
 
             if(stream == "stderr"){
-                return result;
+                return files;
             }
 
             //separate diff for each contained file
@@ -110,8 +110,8 @@ module.exports = (function() {
                 var file_info = chunks[0].split("\n");
                 chunks.shift();
 
-                file.name.old = file_info[2].slice(5,file.length);
-                file.name.new = file_info[3].slice(5,file.length);
+                file.name.old = file_info[2].slice(6,file.length);
+                file.name.new = file_info[3].slice(6,file.length);
 
                 //parse each single chunk
                 for(var j=0; j < chunks.length; j++) {
@@ -131,6 +131,10 @@ module.exports = (function() {
             return files;
         },
 
+        /*
+         * Returns a chunk object which is parsed from the given chunk
+         * header and its text.
+         */
         parseChunk : function(header, chunk_text) {
             var chunk = {header: header,
                          text: chunk_text,

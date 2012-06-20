@@ -17,6 +17,8 @@ var panels = require("ext/panels/panels");
 var markup = require("text!ext/gitc/tree.xml");
 var commands = require("ext/commands/commands");
 
+require("ext/gitc/lib/underscore-min");
+
 var showHideScrollPos;
 
 function $trScroll() {
@@ -134,32 +136,47 @@ module.exports = ext.register("ext/gitc/tree", {
         });
     },
 
+    /**
+     * Creates a model usable by the tree from the given file paths.
+     */
+    createModel: function createFileModel(rootName, files) {
+        var folders = _.groupBy(files, function(key) {
+            return _.reduce(_.initial(key.split("/")), function(a, b) { return a + "/" + b });
+        });
+        return "<data><folder type='folder' name='Stage' path='/workspace/' root='1'>" +
+            _.map(Object.keys(folders).sort(), function(folder) {
+                var children = undefined;
+                if (folders[folder].length == 1 && folders[folder][0].match(".*/$")) { // it's a folder not added yet
+                    children = "";
+                } else {
+                    children = _.map(folders[folder], function(file) {
+                        return "<file type='file' path='" + file + "' name='" +
+                            file.substring(file.lastIndexOf("/") + 1) + "'/>";
+                    }).join("")
+                }
+                return "<folder type='folder' path='" + folder + "' name='" +
+                    folder.substring(folder.lastIndexOf("/") + 1) + "'>" +
+                    children + "</folder>";
+            }).join("") +
+            "</folder></data>";
+    },
+
     onReady : function() {
         var _self = this;
 
-        var createData = function() {
-            var data = elem("data");
-            var root = elem("folder", {type: "folder", name: "Stage", path: "/stage", root: "1"});
-            var file = elem("file", {type: "file", name: "README.txt", path: "/stage/README.txt"});
+        require("ext/gitc/gitc").gitcCommands.send("status -s", function(out, stream, parser) {
+            var st = parser.parseShortStatus(out, stream);
+            var files = st.working_dir.added.concat(st.working_dir.modified);
 
-            data.appendChild(root);
-            root.appendChild(file);
+            diffFiles.getModel().load(_self.createModel("Working Directory", files));
+            if (this.loadedSettings === 1) {
+                var parentNode = diffFiles.queryNode("folder[@root=1]");
 
-            return data;
-        };
-
-        //diffFiles.getModel().load(createData());
-        diffFiles.getModel().load("<data><folder type='folder' name='" +
-            "Stage" + "' path='" + "/stage" + "' root='1'><file type='file' path='/workspace/test.txt' name='test.txt'/></folder></data>");
-
-        if (this.loadedSettings === 1) {
-            var parentNode = diffFiles.queryNode("folder[@root=1]");
-
-            diffFiles.$setLoadStatus(parentNode, "loaded");
-            diffFiles.slideToggle(apf.xmldb.getHtmlNode(parentNode, diffFiles), 1, true, null, null);
-        }
-
-        _self.ready = true;
+                diffFiles.$setLoadStatus(parentNode, "loaded");
+                diffFiles.slideToggle(apf.xmldb.getHtmlNode(parentNode, diffFiles), 1, true, null, null);
+            }
+            _self.ready = true;
+        });
     },
 
     init : function() {

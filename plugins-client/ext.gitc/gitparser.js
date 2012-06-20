@@ -54,11 +54,11 @@ module.exports = (function() {
                 return undefined;
             }
 
-            var files = status.split("\n"); files.pop();
+            var paths = status.split("\n"); paths.pop();
             var file;
 
-            for(var i=0; i<files.length; i++){
-                file = files[i];
+            for(var i=0; i<paths.length; i++){
+                file = paths[i];
 
                 if(file[0] != ' ' && file[0] != '?') {
                     files.staging_area[key_map[file[0]]].push(file.slice(3,file.length));

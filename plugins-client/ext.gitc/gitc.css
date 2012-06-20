@@ -78,3 +78,7 @@
 .ace_gutter .ace_layer {
     overflow: visible;
 }
+
+.mnubtn.gitc .icon {
+  background-image:url(static/ext/gitc/images/gitc.png);
+}

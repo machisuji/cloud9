@@ -93,13 +93,14 @@ module.exports = (function() {
             
             console.log("tab switch from: " + closed_file + " to: " + opened_file);
 
+            this.clearMarkers();
+            
             //unstaged changes
             this.gitcCommands.send("diff " + opened_file, this.addUnstagedChanges.bind(this));
             //staged changes
             this.gitcCommands.send("diff --cached " + opened_file, this.addStagedChanges.bind(this));
             //maintain gutter tooltips
             this.currentEditor.renderer.scrollBar.addEventListener("scroll", this.onScroll.bind(this));
-            this.clearMarkers();
         },
         
         markChanges : function(changes) {

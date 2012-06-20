@@ -22,9 +22,9 @@ module.exports = (function() {
     GitCommands.prototype = {
 
         /**
-         * Sends a git command and returns the output to callback.
+         * Sends a command and returns the output to callback.
          * 
-         * @param {string} command A git command, e.g. "status" or "commit -m"
+         * @param {string} command A command, e.g. "git status", "git commit -m" or "ls"
          * @param {function} callback A function that will be executed when the output of the 
          *          command is caught. The callback will get the output as the first argument
          *          and the stream ("stdout", "stderr") as second.

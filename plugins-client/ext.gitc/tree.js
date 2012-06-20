@@ -164,7 +164,7 @@ module.exports = ext.register("ext/gitc/tree", {
     onReady : function() {
         var _self = this;
 
-        require("ext/gitc/gitc").gitcCommands.send("status -s", function(out, stream, parser) {
+        require("ext/gitc/gitc").gitcCommands.send("git status -s", function(out, stream, parser) {
             var st = parser.parseShortStatus(out, stream);
             var workingDirModel = _self.createModel("Working Directory", st.working_dir.getAll());
             var stageModel = _self.createModel("Stage", st.staging_area.getAll());

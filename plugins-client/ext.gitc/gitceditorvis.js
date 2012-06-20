@@ -13,7 +13,8 @@ module.exports = (function() {
     function GitEditorVis(gitccommands) {
         this.gitcCommands = gitccommands;
         this.currentEditor = undefined;
-        this.changes = undefined;
+        this.currentFile = undefined;
+        this.all_changes = {};
         this.annotations = {};
     }
 
@@ -37,11 +38,12 @@ module.exports = (function() {
             
         },
         
-        createAnnotation : function(line, type, msg) {
+        createAnnotation : function(line, type, msg, status) {
           var annotation = {
             row: line,
             type: type,
             text: msg,
+            status: status,
             tooltip: this.createTooltip(msg, type, line)
           };
           
@@ -70,16 +72,29 @@ module.exports = (function() {
 		  }
         },
         
-        clearMarkers : function() {
-            var ids = this.currentEditor.getSession().getMarkers();
-            for (var i = 0; i < ids.length; i++) {
-                this.currentEditor.getSession().removeMarker(ids[i]);
+        undecorate : function(closedFile) {
+            if (this.annotations[closedFile]) {
+                var annotations = this.annotations[closedFile];
+                for (var annotation in annotations) {
+                    this.undecorateGutterLine(annotations[annotation]);
+                }
+            }
+        },
+        
+        undecorateGutterLine : function(annotation) {
+            if (annotation.type == "deleted") {
+                this.currentEditor.renderer.removeGutterDecoration(annotation.row, "gitc-removed");
+            } else if (annotation.type == "added") {
+                this.currentEditor.renderer.removeGutterDecoration(annotation.row, "gitc-added");
+            } else if (annotation.type == "changed") {
+                this.currentEditor.renderer.removeGutterDecoration(annotation.row, "gitc-changed");
             }
         },
 
     	onTabSwitch : function(e){
             var closed_file = e.currentTarget.$activepage? this.getFilePath(e.currentTarget.$activepage.id) : undefined;
             var opened_file = this.getFilePath(e.nextPage.id);
+            this.currentFile = opened_file;
             this.currentEditor = e.nextPage.$editor.amlEditor.$editor;
             //document change
             //this.currentEditor.on("change", function(evt) {
@@ -93,7 +108,7 @@ module.exports = (function() {
             
             console.log("tab switch from: " + closed_file + " to: " + opened_file);
 
-            this.clearMarkers();
+            this.undecorate(closed_file);
             
             //unstaged changes
             this.gitcCommands.send("git diff " + opened_file, this.addUnstagedChanges.bind(this));
@@ -103,43 +118,84 @@ module.exports = (function() {
             this.currentEditor.renderer.scrollBar.addEventListener("scroll", this.onScroll.bind(this));
         },
         
-        markChanges : function(changes) {
-			for (var k = 0; k < changes.length; k++) {
-				var change = changes[k];
-				for (var i = 0; i < change.chunks.length; i++) {
-					var chunk = change.chunks[i];
-					for (var j = 0; j < chunk.lines.length; j++) {
-						var line = chunk.lines[j];
-						var annotation = this.createAnnotation(line.number_new-1, line.status, line.content);
-						var existingAnnotation = this.annotations[(line.number_new-1).toString()];
-						if (existingAnnotation && existingAnnotation.type == "deleted" && annotation.type == "added") {
-							annotation = this.createAnnotation(line.number_new-1, "changed", line.content)
-						}
-						this.annotations[annotation.row.toString()] = annotation;
-					}
-				}
-			}
-			for (var i in this.annotations) {
-				this.markGutterLine(this.annotations[i]);
-			}
+        decorate : function(filename) {
+            if (this.currentFile != filename)
+                return;
+                
+            if (this.all_changes[this.currentFile].unstaged && this.all_changes[this.currentFile].staged) {
+                //add gutter decoration for all annotations
+                var annotations = this.annotations[this.currentFile];
+                for (var i in annotations) {
+                    this.markGutterLine(annotations[i]);
+                }
+            }
         },
         
-        markStagedChanges : function(changes) {
-            this.markChanges(changes);
+        annotateChunks : function(chunks, status, filename) {
+            if (!this.annotations[filename]) {
+                this.annotations[filename] = {};
+                
+                var annotations = this.annotations[filename];
+                for (var i = 0; i < chunks.length; i++) {
+        			var chunk = chunks[i];
+    				for (var j = 0; j < chunk.lines.length; j++) {
+    					var line = chunk.lines[j];
+    					var annotation = this.createAnnotation(line.number_new-1, line.status, line.content, status);
+                        if (this.isChangeAnnotation(annotation, filename)) {
+                            annotation.type = "changed";
+                        }
+    					annotations[annotation.row.toString()] = annotation;
+    				}
+    			}
+            }
         },
         
-        markUnstagedChanges : function(changes) {
-            this.markChanges(changes);
+        isChangeAnnotation : function(annotation, filename) {
+            var key = annotation.row.toString();
+            var other = this.annotations[filename][key];
+            return other && 
+                (annotation.type == "deleted" && other.type == "added" || 
+                annotation.type == "added" && other.type == "deleted");
         },
 
         addUnstagedChanges : function(output, parser) {
             var changes = parser.parseDiff(output.data, output.stream);
-            this.markUnstagedChanges(changes);
+            var filename = output.args[output.args.length];
+            if (!this.all_changes[filename]) {
+                this.all_changes[filename] = {};
+            }
+            this.all_changes[filename].unstaged = changes;
+            
+            if (changes.length == 0) {
+                return;
+            }
+            
+            //create annotations for unstaged changes
+            for (var i = 0; i < changes.length; i++) {
+    			var change = changes[i];
+				this.annotateChunks(change.chunks, "unstaged", filename);
+			}
+            this.decorate(filename);
         },
 
         addStagedChanges : function(output, parser) {
             var changes = parser.parseDiff(output.data, output.stream);
-            this.markStagedChanges(changes);
+            var filename = output.args[output.args.length];
+            if (!this.all_changes[filename]) {
+                this.all_changes[filename] = {};
+            }
+            this.all_changes[filename].staged = changes;
+            
+            if (changes.length == 0) {
+                return;
+            }
+            
+            //create annotations for unstaged changes
+            for (var i = 0; i < changes.length; i++) {
+        		var change = changes[i];
+				this.annotateChunks(change.chunks, "staged", filename);
+			}
+            this.decorate(filename);
         },
 
         getFilePath : function(filePath) {

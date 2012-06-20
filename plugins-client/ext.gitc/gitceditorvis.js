@@ -132,13 +132,13 @@ module.exports = (function() {
             this.markChanges(changes);
         },
 
-        addUnstagedChanges : function(diff_output, stream, parser) {
-            var changes = parser.parseDiff(diff_output, stream);
+        addUnstagedChanges : function(output, parser) {
+            var changes = parser.parseDiff(output.data, output.stream);
             this.markUnstagedChanges(changes);
         },
 
-        addStagedChanges : function(diff_output, stream, parser) {
-            var changes = parser.parseDiff(diff_output, stream);
+        addStagedChanges : function(output, parser) {
+            var changes = parser.parseDiff(output.data, output.stream);
             this.markStagedChanges(changes);
         },
 

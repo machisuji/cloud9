@@ -42,26 +42,40 @@ module.exports = (function() {
             row: line,
             type: type,
             text: msg,
-            tooltip: this.createTooltip(msg)
+            tooltip: this.createTooltip(msg, type, line)
           };
           
           return annotation;
         },
         
-        createTooltip : function(msg) {
-          var tooltip = document.createElement('div');
-          tooltip.innerText = msg;
-          tooltip.className = 'gitc-tooltip';
-          
-          return tooltip;
+        createTooltip : function(msg, type, line) {
+          if (type == "added")
+		  	return;
+
+		  var anno = this.annotations[(line-1).toString()];
+		  
+		  if (anno && anno.type == type) {
+			anno.text += "\n" + msg;
+			var p = document.createElement('p');
+			p.innerText = msg;
+			anno.tooltip.appendChild(p);
+			return;
+		  } else {
+		  	var tooltip = document.createElement('div');
+			var p = document.createElement('p');
+			p.innerText = msg;
+			tooltip.appendChild(p);
+	        tooltip.className = 'gitc-tooltip';
+			return tooltip;
+		  }
         },
         
-        /*clearMarkers : function() {
-            var ids = this.currentEditor.getSession().getMarkers(false);
+        clearMarkers : function() {
+            var ids = this.currentEditor.getSession().getMarkers();
             for (var i = 0; i < ids.length; i++) {
                 this.currentEditor.getSession().removeMarker(ids[i]);
             }
-        },*/
+        },
 
     	onTabSwitch : function(e){
             var closed_file = e.currentTarget.$activepage? this.getFilePath(e.currentTarget.$activepage.id) : undefined;
@@ -85,8 +99,7 @@ module.exports = (function() {
             this.gitcCommands.send("diff --cached " + opened_file, this.addStagedChanges.bind(this));
             //maintain gutter tooltips
             this.currentEditor.renderer.scrollBar.addEventListener("scroll", this.onScroll.bind(this));
-            //this.clearMarkers();
-			this.markGutterLine(this.createAnnotation(40, "gitc-removed", "Blub"));
+            this.clearMarkers();
         },
         
         markChanges : function(changes) {
@@ -144,7 +157,10 @@ module.exports = (function() {
 		},
         
         addTooltip : function(annotation) {
-            var gutterLayer = document.getElementById('q11').children[2].children[1];
+            if (!annotation.tooltip)
+				return;
+
+			var gutterLayer = document.getElementById('q11').children[2].children[1];
             var renderer = this.currentEditor.renderer;
             var firstLineIndex = renderer.getFirstVisibleRow();
             var lastLineIndex = renderer.getLastVisibleRow();
@@ -153,7 +169,7 @@ module.exports = (function() {
             //console.log("annoLine: " + annotation.row);
             if (firstLineIndex <= annotation.row && lastLineIndex >= annotation.row) {
                 var el = gutterLayer.children[annotation.row-firstLineIndex];
-                el.appendChild(annotation.tooltip);
+				el.appendChild(annotation.tooltip);
             }
         }
 

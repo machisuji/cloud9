@@ -36,11 +36,20 @@
 
 .gitc-tooltip {
 	background: #ff0;
+	border: 1px solid #888;
     display: none;
-	height: 18px;
-    padding: 2px;
+	font-family: "Sans-Serif";
+	font-size: 10px;
+	left: 37px;
+	margin-top: -8px;
+    padding: 4px;
     position: absolute;
-    text-align: center;
+	text-align: left;
+}
+
+.gitc-tooltip p {
+	margin: 0;
+	padding: 0;
 }
 
 .ace_gutter-cell:hover .gitc-tooltip {
@@ -48,18 +57,18 @@
 }
 
 .gitc-added .gitc-tooltip {
-    background: rgb(0, 255, 0);
-    color: black;
+    background: #cfc;
+    color: #0f0;
 }
 
 .gitc-changed .gitc-tooltip {
-	background: rgb(0, 0, 255);
-    color: black;
+	background: #ccf;
+    color: #00f;
 }
 
 .gitc-removed .gitc-tooltip {
-	background: rgb(255, 0, 0);
-    color: black;
+	background: #fcc;
+    color: #f00;
 }
 
 .ace_gutter {

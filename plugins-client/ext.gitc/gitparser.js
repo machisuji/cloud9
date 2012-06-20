@@ -111,8 +111,16 @@ module.exports = (function() {
                 var file_info = chunks[0].split("\n");
                 chunks.shift();
 
-                file.name_old = file_info[2].slice(6,file.length);
-                file.name_new = file_info[3].slice(6,file.length);
+                //find old and new name
+                for(var j=0; j < file_info.length; j++) {
+                    var file_info_line = file_info[j];
+                    if(file_info_line.slice(0,3) == "---"){
+                        file.name_old = file_info_line.slice(6,file.length);
+                    }
+                    if(file_info_line.slice(0,3) == "+++") {
+                        file.name_new = file_info_line.slice(6,file.length);
+                    }
+                }
 
                 //parse each single chunk
                 for(var j=0; j < chunks.length; j++) {

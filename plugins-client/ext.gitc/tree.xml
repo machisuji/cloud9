@@ -34,7 +34,51 @@
                 <data/>
             </a:model>
 
-            <a:tree id="diffFiles" canrename="true" border="0" simpledata="true" model="diffModel"
+            <a:tree id="diffFiles" canrename="false" border="0" simpledata="true" model="diffModel"
+              contextmenu="mnuCtxTree" multiselect="true" reselectable="true"
+              onbeforeremove="return require('core/util').removeInteractive(this)"
+              onbeforemove="this.disable();" 
+              flex="1" scrollbar="sbShared 2 2 2"
+            >
+                <a:each match="[project|file|folder]" sort="[@name]" sort-method="filesort">
+                    <!-- <a:insert match="[folder]" get="{davProject.readdir([@path])}" /> -->
+                    <a:caption match="[@name]" value="{([../@changed] == 1 ? '*' : '') + [.]}" />
+                    <a:icon match="[folder|project]" value="folder.png" />
+                    <a:icon match="[folder|project]" value="../../../gitc/images/paper_minus_small.png" />
+                    <a:selectable match="[folder|file[not(@type='fileupload')]]" />
+                    <a:icon match="[file[@type='fileupload']]" value="file-tree-load-spinner.gif" />
+                    <a:css match="[file[@type='fileupload']]" value="fileupload" />
+
+                    <a:icon match="[file[@status='added']]" value="../../../gitc/images/paper_plus_small.png" />
+                    <a:icon match="[file[@status='removed']]" value="../../../gitc/images/paper_minus_small.png" />
+                    <a:icon match="[file[@status='changed']]" value="../../../gitc/images/paper_star_small.png" />
+
+                    <a:icon match="[file]" value="{require('core/util').getFileIcon(%[.])}" />
+                </a:each>
+    
+                <a:add type="folder" get="{davProject.mkdir([@path], 'New Folder')}" />
+                <a:add type="file" get="{davProject.create([@path], 'New File.txt', '')}" />
+                <a:rename match="[file|folder[not(@path='/workspace')]]" set="{davProject.rename([@name], [@oldpath])}" />
+                <a:move set="{require('ext/gitc/tree').moveFile([@path], createPath([@path], [../@path]))}"/>
+                <a:remove match="[file|folder]" set="{require('ext/filesystem/filesystem').remove([@path])}"/>
+                <a:copy match="[file|folder]" set="{
+                    davProject.copy([@path], createPath([@newname] || [@path], [../@path]))
+                }" undo="{
+                    
+                }"/>
+    
+                <a:drag match="[folder|file]" />
+                <a:drop match="[folder|file]" target="[folder]"
+                    action="tree-append" copy="{event.ctrlKey}" />
+                <a:drop match="[folder|file]" target="[file]"
+                    action="insert-before" copy="{event.ctrlKey}" />    
+            </a:tree>
+
+            <a:model id="stageModel">
+                <data/>
+            </a:model>
+
+            <a:tree id="stageFiles" canrename="false" border="0" simpledata="true" model="stageModel"
               contextmenu="mnuCtxTree" multiselect="true" reselectable="true"
               onbeforeremove="return require('core/util').removeInteractive(this)"
               onbeforemove="this.disable();" 

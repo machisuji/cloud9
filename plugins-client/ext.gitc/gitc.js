@@ -37,35 +37,38 @@ module.exports = ext.register("ext/gitc/gitc", {
 
         var _self = this;
         
-        menus.addItemByPath("Tools/gitc", new apf.item({
+		menus.addItemByPath("Tools/gitc", new apf.item({
+            // @TODO: Support more CVSs? Just "Blame this File"
             onclick : function(){
-
-                _self.gitcCommands.send("diff", function(out, stream, pars) {
-                    console.log(pars.parseDiff(out, stream));
-                    console.log("");
-                });
+				var editor = editors.currentEditor.amlEditor.$editor;
+		        /*editor.on("document_change", function(e){
+                    console.log("Blub");
+		        });*/
                 
                 var Range = require("ace/range").Range;
-                var editor = editors.currentEditor.amlEditor.$editor;
-
-                _self.markLineAsRemoved(38);
-                _self.markLineAsAdded(39);
-                _self.markLineAsChanged(40);
                 
-                var wordRange = new Range(38, 20, 38, 27);
-                editor.getSession().addMarker(wordRange, "ace_active_line", "text");
+                /*var diff = _self.gitcCommands.getChangesInFile("gitc.js");
+                var adds = diff.added;
+                var changes = diff.changed;*/
                 
-                editor.getSession().setAnnotations([{
-                  row: 38,
-                  text: "bgRange",
-                  type: "error"
-                }]);
+                _self.markLineAsRemoved(41);
+                _self.markLineAsAdded(42);
+                _self.markLineAsChanged(43);
+                
+                /*var annotations = {};
+                var newAnnotation = {
+                    row: 45,
+                    text: "Removed XXX.",
+                    type: "removed"
+                };
+                annotations[newAnnotation.row] = newAnnotation;
+                _self.setAnnotations(annotations);*/
+                
+                _self.addTooltip(41, "Blub");
+                
                 
                 var line = editor.getSession().getLine();
                 //var ar = editor.getSession().getAWordRange(37, 39);
-                
-                
-                
                 
                 //editor.getSession().on('change', function(e) { alert(e.data.text) });
                 //var first = editor.getFirstVisibleRow();
@@ -109,16 +112,46 @@ module.exports = ext.register("ext/gitc/gitc", {
     markLineAsRemoved : function(line) {
 		var editor = editors.currentEditor.amlEditor.$editor;
         editor.getSession().addMarker(new Range(line, 1, line, 10), "gitc-removed", "background");
+		editor.renderer.addGutterDecoration(line, "gitc-removed");
     },
     
     markLineAsAdded : function(line) {
 		var editor = editors.currentEditor.amlEditor.$editor;
         editor.getSession().addMarker(new Range(line, 1, line, 10), "gitc-added", "background");
+		editor.renderer.addGutterDecoration(line, "gitc-added");
     },
     
     markLineAsChanged : function(line) {
 		var editor = editors.currentEditor.amlEditor.$editor;
         editor.getSession().addMarker(new Range(line, 1, line, 10), "gitc-changed", "background");
+        editor.renderer.addGutterDecoration(line, "gitc-changed");
+    },
+    
+    setAnnotations : function(annotations) {
+        var el = document.getElementById('q11').children[2].children[1].firstChild;
+        while (el.nextSibling) {
+            var index = parseInt(el.innerHTML);
+            if (annotations[index] != undefined) {
+                var annotation = annotations[index];
+                el.className += " gitc-" + annotation.type;
+                el.title = annotation.text;
+            }
+            el = el.nextSibling;
+        }
+    },
+    
+    addTooltip : function(line, msg) {
+        var gutterLayer = document.getElementById('q11').children[2].children[1];
+        var renderer = editors.currentEditor.amlEditor.$editor.renderer;
+        var firstLineIndex = renderer.getFirstVisibleRow();
+        var lastLineIndex = renderer.getLastVisibleRow();
+        if (firstLineIndex <= line && lastLineIndex >= line) {
+            var el = gutterLayer.children[line-firstLineIndex];
+            var tooltip = document.createElement('div');
+            tooltip.className = "gitc-tooltip";
+            tooltip.innerText = msg;
+            el.appendChild(tooltip);
+        }
     }
 
 });

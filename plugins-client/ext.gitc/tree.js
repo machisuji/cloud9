@@ -140,18 +140,18 @@ module.exports = ext.register("ext/gitc/tree", {
      * Creates a model usable by the tree from the given file paths.
      */
     createModel: function createFileModel(rootName, files) {
-        var folders = _.groupBy(files, function(key) {
-            return _.reduce(_.initial(key.split("/")), function(a, b) { return a + "/" + b });
+        var folders = _.groupBy(files, function(file) {
+            return _.reduce(_.initial(file.path.split("/")), function(a, b) { return a + "/" + b });
         });
-        return "<data><folder type='folder' name='Stage' path='/workspace/' root='1'>" +
+        return "<data><folder type='folder' name='" + rootName + "' path='/workspace/' root='1'>" +
             _.map(Object.keys(folders).sort(), function(folder) {
                 var children = undefined;
-                if (folders[folder].length == 1 && folders[folder][0].match(".*/$")) { // it's a folder not added yet
+                if (folders[folder].length == 1 && folders[folder][0].path.match(".*/$")) { // it's a folder not added yet
                     children = "";
                 } else {
                     children = _.map(folders[folder], function(file) {
-                        return "<file type='file' path='" + file + "' name='" +
-                            file.substring(file.lastIndexOf("/") + 1) + "'/>";
+                        return "<file type='file' path='" + file.path + "' name='" +
+                            file.path.substring(file.path.lastIndexOf("/") + 1) + "' status='" + file.status + "' />";
                     }).join("")
                 }
                 return "<folder type='folder' path='" + folder + "' name='" +
@@ -166,9 +166,9 @@ module.exports = ext.register("ext/gitc/tree", {
 
         require("ext/gitc/gitc").gitcCommands.send("status -s", function(out, stream, parser) {
             var st = parser.parseShortStatus(out, stream);
-            var files = st.working_dir.added.concat(st.working_dir.modified);
+            var model = _self.createModel("Working Directory", st.working_dir.getAll());
 
-            diffFiles.getModel().load(_self.createModel("Working Directory", files));
+            diffFiles.getModel().load(model);
             if (this.loadedSettings === 1) {
                 var parentNode = diffFiles.queryNode("folder[@root=1]");
 

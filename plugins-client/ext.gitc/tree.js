@@ -141,18 +141,21 @@ module.exports = ext.register("ext/gitc/tree", {
      */
     createModel: function createFileModel(rootName, files) {
         var folders = _.groupBy(files, function(file) {
-            return _.reduce(_.initial(file.path.split("/")), function(a, b) { return a + "/" + b });
+            return _.initial(file.path.split("/")).join("/");
         });
+        var root = folders[""] || []; delete folders[""];
+        var makeFile = function(file) {
+            return "<file type='file' path='" + file.path + "' name='" +
+                file.path.substring(file.path.lastIndexOf("/") + 1) + "' status='" + file.status + "' />";
+        };
         return "<data><folder type='folder' name='" + rootName + "' path='/workspace/' root='1'>" +
+            _.map(root, makeFile) +
             _.map(Object.keys(folders).sort(), function(folder) {
                 var children = undefined;
                 if (folders[folder].length == 1 && folders[folder][0].path.match(".*/$")) { // it's a folder not added yet
                     children = "";
                 } else {
-                    children = _.map(folders[folder], function(file) {
-                        return "<file type='file' path='" + file.path + "' name='" +
-                            file.path.substring(file.path.lastIndexOf("/") + 1) + "' status='" + file.status + "' />";
-                    }).join("")
+                    children = _.map(folders[folder], makeFile).join("")
                 }
                 return "<folder type='folder' path='" + folder + "' name='" +
                     folder.substring(folder.lastIndexOf("/") + 1) + "'>" +

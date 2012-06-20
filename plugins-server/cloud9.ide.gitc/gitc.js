@@ -79,9 +79,12 @@ util.inherits(GitcPlugin, Plugin);
             }
         }
 
+        //remove gitc command and execute actual command
+        var args = message.argv.slice(1);
+
         this.pm.spawn("shell", {
-            command: "git",
-            args: message.argv.slice(1),
+            command: args[0],
+            args: args.slice(1),
             cwd: message.cwd,
             env: this.gitEnv,
             extra: message.extra

@@ -166,14 +166,19 @@ module.exports = ext.register("ext/gitc/tree", {
 
         require("ext/gitc/gitc").gitcCommands.send("status -s", function(out, stream, parser) {
             var st = parser.parseShortStatus(out, stream);
-            var model = _self.createModel("Working Directory", st.working_dir.getAll());
+            var workingDirModel = _self.createModel("Working Directory", st.working_dir.getAll());
+            var stageModel = _self.createModel("Stage", st.staging_area.getAll());
 
-            diffFiles.getModel().load(model);
+            diffFiles.getModel().load(workingDirModel);
+            stageFiles.getModel().load(stageModel);
             if (this.loadedSettings === 1) {
                 var parentNode = diffFiles.queryNode("folder[@root=1]");
-
                 diffFiles.$setLoadStatus(parentNode, "loaded");
                 diffFiles.slideToggle(apf.xmldb.getHtmlNode(parentNode, diffFiles), 1, true, null, null);
+
+                var stageRoot = stageFiles.queryNode("folder[@root=1]");
+                stageFiles.$setLoadStatus(stageRoot, "loaded");
+                stageFiles.slideToggle(apf.xmldb.getHtmlNode(stageRoot, stageFiles), 1, true, null, null);
             }
             _self.ready = true;
         });
@@ -188,11 +193,13 @@ module.exports = ext.register("ext/gitc/tree", {
 
         ide.addEventListener("afteroffline", function(){
             diffFiles.selectable = false;
+            stageFiles.selectable = false;
             //_self.button.enable();
         })
         
         ide.addEventListener("afteronline", function(){
             diffFiles.selectable = true;
+            stageFiles.selectable = true;
         })
 
         // This adds a "Show Hidden Files" item to the settings dropdown
@@ -236,9 +243,18 @@ module.exports = ext.register("ext/gitc/tree", {
             return false;
     },
 
-    getTree: function(module) {
+    getWorkingDirTree: function(module) {
         module = module || this;
         return module.panel.childNodes[3].childNodes[1];
+    },
+
+    getStageTree: function(module) {
+        module = module || this;
+        return module.panel.childNodes[3].childNodes[4];
+    },
+
+    getTree: function(module) {
+        return this.getWorkingDirTree(module);
     },
 
     moveFile : function(path, newpath){

@@ -44,9 +44,15 @@
                     <!-- <a:insert match="[folder]" get="{davProject.readdir([@path])}" /> -->
                     <a:caption match="[@name]" value="{([../@changed] == 1 ? '*' : '') + [.]}" />
                     <a:icon match="[folder|project]" value="folder.png" />
+                    <a:icon match="[folder|project]" value="../../../gitc/images/paper_minus_small.png" />
                     <a:selectable match="[folder|file[not(@type='fileupload')]]" />
                     <a:icon match="[file[@type='fileupload']]" value="file-tree-load-spinner.gif" />
                     <a:css match="[file[@type='fileupload']]" value="fileupload" />
+
+                    <a:icon match="[file[@status='added']]" value="../../../gitc/images/paper_plus_small.png" />
+                    <a:icon match="[file[@status='removed']]" value="../../../gitc/images/paper_minus_small.png" />
+                    <a:icon match="[file[@status='changed']]" value="../../../gitc/images/paper_star_small.png" />
+ 
                     <a:icon match="[file]" value="{require('core/util').getFileIcon(%[.])}" />
                 </a:each>
     

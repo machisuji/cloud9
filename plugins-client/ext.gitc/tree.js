@@ -224,8 +224,6 @@ module.exports = ext.register("ext/gitc/tree", {
                     } else {
                         setTimeout(beReady, 100);
                     }
-                } else {
-                    _self.getTree().removeEventListener("focus", onFocus);
                 }
             };
             beReady();
@@ -251,6 +249,7 @@ module.exports = ext.register("ext/gitc/tree", {
     
     show : function(e) {
         if (!this.panel || !this.panel.visible) {
+            this.ready = false;
             panels.activate(this);
             this.enable();
         }

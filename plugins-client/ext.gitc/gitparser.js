@@ -120,7 +120,8 @@ module.exports = (function() {
             diffs.shift(); // Omit leading empty field
 
             for(var i=0; i < diffs.length; i++) {
-                var file = { name: {old: "", new: ""},
+                var file = { name_old: "", 
+                             name_new: "",
                              diff_header: "",
                              chunks: [] };
 
@@ -130,8 +131,8 @@ module.exports = (function() {
                 var file_info = chunks[0].split("\n");
                 chunks.shift();
 
-                file.name.old = file_info[2].slice(6,file.length);
-                file.name.new = file_info[3].slice(6,file.length);
+                file.name_old = file_info[2].slice(6,file.length);
+                file.name_new = file_info[3].slice(6,file.length);
 
                 //parse each single chunk
                 for(var j=0; j < chunks.length; j++) {

@@ -77,7 +77,8 @@ module.exports = (function() {
                 var callback = this.command_to_callback_map[msg.extra.command_id];
                 var output = this.pid_to_message_map[msg.pid];
                 if (callback) {
-                    callback(output.data, output.stream, this.git_parser);
+                    var result = {data: output.data, stream: output.stream, args: msg.extra.args};
+                    callback(result, this.git_parser);
                 }
                 delete this.command_to_callback_map[msg.extra.command_id];
                 delete this.pid_to_message_map[msg.pid];

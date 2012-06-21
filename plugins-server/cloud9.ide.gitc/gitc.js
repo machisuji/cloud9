@@ -81,6 +81,7 @@ util.inherits(GitcPlugin, Plugin);
 
         //remove gitc command and execute actual command
         var args = message.argv.slice(1);
+        message.extra.args = args;
 
         this.pm.spawn("shell", {
             command: args[0],

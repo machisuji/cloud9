@@ -119,8 +119,12 @@ module.exports = (function() {
         },
         
         decorate : function(filename) {
-            if (this.currentFile != filename)
+            if (filename != this.currentFile) {
                 return;
+            } else {
+                
+            }
+                
                 
             if (this.all_changes[this.currentFile].unstaged && this.all_changes[this.currentFile].staged) {
                 //add gutter decoration for all annotations

@@ -73,6 +73,26 @@ module.exports = (function() {
                 }
             }
 
+            var getPathsWithStatus = function getAll(area) {
+                require("ext/gitc/lib/underscore-min");
+                var all = [[area.added, "added"], [area.deleted, "removed"], [area.modified, "changed"]];
+                var files = _.flatten(_.map(all, function(entry) {
+                    var files = entry[0]; var status = entry[1];
+                    return _.map(files, function(file) {
+                        return {path: file, status: status}; // end result = a list of these maps
+                    });
+                }));
+                return _.sortBy(files, function(file) {
+                    return file.path;
+                });
+            };
+            files.staging_area.getAll = function getAll() {
+                return getPathsWithStatus(files.staging_area);
+            };
+            files.working_dir.getAll = function getAll() {
+                return getPathsWithStatus(files.working_dir);
+            };
+
             if(callback) {
                 callback(files);
             }

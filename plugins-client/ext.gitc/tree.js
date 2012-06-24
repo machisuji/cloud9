@@ -17,6 +17,8 @@ var panels = require("ext/panels/panels");
 var markup = require("text!ext/gitc/tree.xml");
 var commands = require("ext/commands/commands");
 
+require("ext/gitc/lib/underscore-min");
+
 var showHideScrollPos;
 
 function $trScroll() {
@@ -134,32 +136,55 @@ module.exports = ext.register("ext/gitc/tree", {
         });
     },
 
+    /**
+     * Creates a model usable by the tree from the given file paths.
+     */
+    createModel: function createFileModel(rootName, files) {
+        var folders = _.groupBy(files, function(file) {
+            return _.initial(file.path.split("/")).join("/");
+        });
+        var root = folders[""] || []; delete folders[""];
+        var makeFile = function(file) {
+            return "<file type='file' path='" + file.path + "' name='" +
+                file.path.substring(file.path.lastIndexOf("/") + 1) + "' status='" + file.status + "' />";
+        };
+        return "<data><folder type='folder' name='" + rootName + "' path='/workspace/' root='1'>" +
+            _.map(root, makeFile) +
+            _.map(Object.keys(folders).sort(), function(folder) {
+                var children = undefined;
+                if (folders[folder].length == 1 && folders[folder][0].path.match(".*/$")) { // it's a folder not added yet
+                    children = "";
+                } else {
+                    children = _.map(folders[folder], makeFile).join("")
+                }
+                return "<folder type='folder' path='" + folder + "' name='" +
+                    folder.substring(folder.lastIndexOf("/") + 1) + "'>" +
+                    children + "</folder>";
+            }).join("") +
+            "</folder></data>";
+    },
+
     onReady : function() {
         var _self = this;
 
-        var createData = function() {
-            var data = elem("data");
-            var root = elem("folder", {type: "folder", name: "Stage", path: "/stage", root: "1"});
-            var file = elem("file", {type: "file", name: "README.txt", path: "/stage/README.txt"});
+        require("ext/gitc/gitc").gitcCommands.send("git status -s", function(output, parser) {
+            var st = parser.parseShortStatus(output.data, output.stream);
+            var workingDirModel = _self.createModel("Working Directory", st.working_dir.getAll());
+            var stageModel = _self.createModel("Stage", st.staging_area.getAll());
 
-            data.appendChild(root);
-            root.appendChild(file);
+            diffFiles.getModel().load(workingDirModel);
+            stageFiles.getModel().load(stageModel);
+            if (this.loadedSettings === 1) {
+                var parentNode = diffFiles.queryNode("folder[@root=1]");
+                diffFiles.$setLoadStatus(parentNode, "loaded");
+                diffFiles.slideToggle(apf.xmldb.getHtmlNode(parentNode, diffFiles), 1, true, null, null);
 
-            return data;
-        };
-
-        //diffFiles.getModel().load(createData());
-        diffFiles.getModel().load("<data><folder type='folder' name='" +
-            "Stage" + "' path='" + "/stage" + "' root='1'><file type='file' path='/workspace/test.txt' name='test.txt'/></folder></data>");
-
-        if (this.loadedSettings === 1) {
-            var parentNode = diffFiles.queryNode("folder[@root=1]");
-
-            diffFiles.$setLoadStatus(parentNode, "loaded");
-            diffFiles.slideToggle(apf.xmldb.getHtmlNode(parentNode, diffFiles), 1, true, null, null);
-        }
-
-        _self.ready = true;
+                var stageRoot = stageFiles.queryNode("folder[@root=1]");
+                stageFiles.$setLoadStatus(stageRoot, "loaded");
+                stageFiles.slideToggle(apf.xmldb.getHtmlNode(stageRoot, stageFiles), 1, true, null, null);
+            }
+            _self.ready = true;
+        });
     },
 
     init : function() {
@@ -171,11 +196,13 @@ module.exports = ext.register("ext/gitc/tree", {
 
         ide.addEventListener("afteroffline", function(){
             diffFiles.selectable = false;
+            stageFiles.selectable = false;
             //_self.button.enable();
         })
         
         ide.addEventListener("afteronline", function(){
             diffFiles.selectable = true;
+            stageFiles.selectable = true;
         })
 
         // This adds a "Show Hidden Files" item to the settings dropdown
@@ -207,8 +234,6 @@ module.exports = ext.register("ext/gitc/tree", {
                     } else {
                         setTimeout(beReady, 100);
                     }
-                } else {
-                    _self.getTree().removeEventListener("focus", onFocus);
                 }
             };
             beReady();
@@ -221,9 +246,18 @@ module.exports = ext.register("ext/gitc/tree", {
             return false;
     },
 
-    getTree: function(module) {
+    getWorkingDirTree: function(module) {
         module = module || this;
         return module.panel.childNodes[3].childNodes[1];
+    },
+
+    getStageTree: function(module) {
+        module = module || this;
+        return module.panel.childNodes[3].childNodes[4];
+    },
+
+    getTree: function(module) {
+        return this.getWorkingDirTree(module);
     },
 
     moveFile : function(path, newpath){
@@ -234,6 +268,7 @@ module.exports = ext.register("ext/gitc/tree", {
     
     show : function(e) {
         if (!this.panel || !this.panel.visible) {
+            this.ready = false;
             panels.activate(this);
             this.enable();
         }

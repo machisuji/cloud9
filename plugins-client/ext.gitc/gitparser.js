@@ -107,7 +107,9 @@ module.exports = (function() {
          * 'git diff HEAD' for all staged or unstaged changes
          * command.
          */
-        parseDiff : function(diff, stream) {
+        parseDiff : function(diff, stream, returnContextLines) {
+            var returnContextLines = returnContextLines || false;
+
             var files = [];
 
             if(stream == "stderr"){
@@ -131,8 +133,16 @@ module.exports = (function() {
                 var file_info = chunks[0].split("\n");
                 chunks.shift();
 
-                file.name_old = file_info[2].slice(6,file.length);
-                file.name_new = file_info[3].slice(6,file.length);
+                //find old and new name
+                for(var j=0; j < file_info.length; j++) {
+                    var file_info_line = file_info[j];
+                    if(file_info_line.slice(0,3) == "---"){
+                        file.name_old = file_info_line.slice(6,file.length);
+                    }
+                    if(file_info_line.slice(0,3) == "+++") {
+                        file.name_new = file_info_line.slice(6,file.length);
+                    }
+                }
 
                 //parse each single chunk
                 for(var j=0; j < chunks.length; j++) {
@@ -143,7 +153,7 @@ module.exports = (function() {
                     var first_line_end = chunk.search("\n");
                     var text = chunk.slice(first_line_end+1,chunk.length);
 
-                    file.chunks.push(this.parseChunk(header, text));
+                    file.chunks.push(this._parseChunk(header, text, returnContextLines));
                 }
 
                 files.push(file);
@@ -156,7 +166,7 @@ module.exports = (function() {
          * Returns a chunk object which is parsed from the given chunk
          * header and its text.
          */
-        parseChunk : function(header, chunk_text) {
+        _parseChunk : function(header, chunk_text, returnContextLines) {
             var chunk = {header: header,
                          text: chunk_text,
                          lines: []}
@@ -171,13 +181,19 @@ module.exports = (function() {
                 if(current_line == "") {
                     continue;
                 }
-                if(current_line[0] == ' ') {
-                    position_old++; position_new++;
-                    continue;
-                }
                 var line = {content: current_line.slice(1,current_line.length)};
-
-                if(current_line[0] == '+') {
+                
+                if(current_line[0] == ' ') {
+                    if(returnContextLines) {
+                        line.status = 'context';
+                        line.number_new = position_new;
+                        line.number_old = position_old;
+                        position_old++; position_new++;
+                    } else {
+                        position_old++; position_new++;
+                        continue;
+                    }
+                } else if(current_line[0] == '+') {
                     line.status = 'added';
                     line.number_new = position_new;
                     position_new++;

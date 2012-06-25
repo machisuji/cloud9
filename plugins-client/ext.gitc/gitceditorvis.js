@@ -7,7 +7,6 @@
 define(function(require, exports, module) {
 var Range = require("ace/range").Range;
 
-
 module.exports = (function() {
     
     function GitEditorVis(gitccommands) {
@@ -29,9 +28,9 @@ module.exports = (function() {
             } else if (annotation.type == "changed") {
                 //this.currentEditor.getSession().addMarker(new Range(annotation.row, 1, annotation.row, 10), "gitc-changed", "background");
                 this.currentEditor.renderer.addGutterDecoration(annotation.row, "gitc-changed");
-            } else if (annotation.type == "deleted") {
+            //} else if (annotation.type == "deleted") {
                 //this.currentEditor.getSession().addMarker(new Range(annotation.row, 1, annotation.row, 10), "gitc-removed", "background");
-                this.currentEditor.renderer.addGutterDecoration(annotation.row, "gitc-removed");
+                //this.currentEditor.renderer.addGutterDecoration(annotation.row, "gitc-removed");
             };
             
             this.addTooltip(annotation);
@@ -39,36 +38,60 @@ module.exports = (function() {
         },
         
         createAnnotation : function(line, type, msg, status) {
+          console.log(type);
           var annotation = {
             row: line,
             type: type,
             text: msg,
-            status: status,
-            tooltip: this.createTooltip(msg, type, line)
+            status: status
           };
           
+          this.createTooltip(annotation);
           return annotation;
         },
         
-        createTooltip : function(msg, type, line) {
-          if (type == "added")
+        createTooltip : function(annotation) {
+          if (annotation.type == "added")
 		  	return;
-
-		  var anno = this.annotations[(line-1).toString()];
+          var prevAnno = this.annotations[this.currentFile][(annotation.row-1).toString()];
+          var nextAnno = this.annotations[this.currentFile][(annotation.row+1).toString()];
+          
+          var p = document.createElement('p');
+          p.innerText = annotation.text;
 		  
-		  if (anno && anno.type == type) {
-			anno.text += "\n" + msg;
-			var p = document.createElement('p');
-			p.innerText = msg;
-			anno.tooltip.appendChild(p);
-			return;
+		  if (prevAnno && prevAnno.type == annotation.type) {
+			prevAnno.text += "\n" + annotation.text;
+			prevAnno.tooltip.insertBefore(p, prevAnno.tooltip.lastChild);
 		  } else {
-		  	var tooltip = document.createElement('div');
-			var p = document.createElement('p');
-			p.innerText = msg;
-			tooltip.appendChild(p);
-	        tooltip.className = 'gitc-tooltip';
-			return tooltip;
+    	    annotation.tooltip = document.createElement('div');
+            annotation.tooltip.className = 'gitc-tooltip';
+            annotation.tooltip.appendChild(p);
+            
+            var commitLink = document.createElement('a');
+            commitLink.innerText = "Commit";
+            commitLink.onClick = function(e) {
+              //commit changes of this annotation  
+            };
+            
+            var revertLink = document.createElement('a');
+            revertLink.innerText = "Revert";
+            revertLink.onClick = function(e) {
+              //revert changes of this annotation  
+            };
+            
+            var commitRevertDiv = document.createElement('div');
+            commitRevertDiv.appendChild(commitLink);
+            commitRevertDiv.appendChild(revertLink);
+            
+            
+            if (nextAnno && nextAnno.type == annotation.type) {
+                annotation.text += "\n" + nextAnno.text;
+                while(nextAnno.firstChild) {
+                    var firstChild = nextAnno.firstChild;
+                    annotation.tooltip.insertBefore(firstChild, annotation.tooltip.lastChild);
+                    nextAnno.removeChild(firstChild);
+                }
+            }
 		  }
         },
         
@@ -80,7 +103,6 @@ module.exports = (function() {
                 }
             }
         },
-        
         undecorateGutterLine : function(annotation) {
             if (annotation.type == "deleted") {
                 this.currentEditor.renderer.removeGutterDecoration(annotation.row, "gitc-removed");
@@ -117,7 +139,6 @@ module.exports = (function() {
             //maintain gutter tooltips
             this.currentEditor.renderer.scrollBar.addEventListener("scroll", this.onScroll.bind(this));
         },
-        
         decorate : function(filename) {
             if (filename != this.currentFile) {
                 return;
@@ -164,7 +185,7 @@ module.exports = (function() {
 
         addUnstagedChanges : function(output, parser) {
             var changes = parser.parseDiff(output.data, output.stream);
-            var filename = output.args[output.args.length];
+            var filename = output.args[output.args.length-1];
             if (!this.all_changes[filename]) {
                 this.all_changes[filename] = {};
             }
@@ -181,10 +202,13 @@ module.exports = (function() {
 			}
             this.decorate(filename);
         },
+        
+        //Bla
+        //Blub
 
         addStagedChanges : function(output, parser) {
             var changes = parser.parseDiff(output.data, output.stream);
-            var filename = output.args[output.args.length];
+            var filename = output.args[output.args.length-1];
             if (!this.all_changes[filename]) {
                 this.all_changes[filename] = {};
             }
@@ -212,8 +236,12 @@ module.exports = (function() {
         },
 
 		onScroll : function(e) {
-            for (var i in this.annotations) {
-    		    this.addTooltip(this.annotations[i]);
+            for (var i in this.annotations[this.currentFile]) {
+                var annotation = this.annotations[this.currentFile][i];
+                if (annotation.type == "deleted") {
+                    this.decorateAsDeleted(annotation);
+                }
+                this.addTooltip(annotation);
 			}
 		},
         
@@ -225,12 +253,43 @@ module.exports = (function() {
             var renderer = this.currentEditor.renderer;
             var firstLineIndex = renderer.getFirstVisibleRow();
             var lastLineIndex = renderer.getLastVisibleRow();
-            //console.log("lastLine: " + lastLineIndex);
-            //console.log("firstLine: " + firstLineIndex);
-            //console.log("annoLine: " + annotation.row);
-            if (firstLineIndex <= annotation.row && lastLineIndex >= annotation.row) {
-                var el = gutterLayer.children[annotation.row-firstLineIndex];
-				el.appendChild(annotation.tooltip);
+            if (firstLineIndex < annotation.row && lastLineIndex >= annotation.row) {
+                var el = gutterLayer.firstChild;
+                while (el.innerText != annotation.row.toString()) {
+                    el = el.nextSibling;
+                }
+                if (annotation.type == "deleted") {
+                    el.nextSibling.appendChild(annotation.tooltip);
+                } else {
+                    el.appendChild(annotation.tooltip);
+                }
+            }
+        },
+        
+        decorateAsDeleted : function(annotation) {
+            var gutterLayer = document.getElementById('q11').children[2].children[1];
+            var renderer = this.currentEditor.renderer;
+            var firstLineIndex = renderer.getFirstVisibleRow();
+            var lastLineIndex = renderer.getLastVisibleRow();
+            
+            if (firstLineIndex <= annotation.row && lastLineIndex > annotation.row) {
+                var prevCell = gutterLayer.firstChild;
+                var nextCell = prevCell.nextSibling;
+                
+                while (prevCell.innerText != annotation.row.toString()) {
+                    prevCell = prevCell.nextSibling;
+                    nextCell = prevCell.nextSibling;
+                }
+                
+                var cell = document.createElement('div');
+                cell.classList.add("ace_gutter-cell");
+                cell.classList.add("gitc-removed");
+                cell.setAttribute("style", "height: 2px");
+                
+                prevCell.setAttribute("style", "height: 15px");
+                nextCell.setAttribute("style", "height: 15px");
+                
+                gutterLayer.insertBefore(cell, nextCell);
             }
         }
 

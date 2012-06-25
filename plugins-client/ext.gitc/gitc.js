@@ -55,6 +55,8 @@ module.exports = ext.register("ext/gitc/gitc", {
                 _self.markLineAsAdded(42);
                 _self.markLineAsChanged(43);
                 
+                //Bla, bla, bla
+                
                 /*var annotations = {};
                 var newAnnotation = {
                     row: 45,

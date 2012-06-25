@@ -38,7 +38,6 @@ module.exports = (function() {
         },
         
         createAnnotation : function(line, type, msg, status) {
-          console.log(type);
           var annotation = {
             row: line,
             type: type,
@@ -48,6 +47,27 @@ module.exports = (function() {
           
           this.createTooltip(annotation);
           return annotation;
+        },
+        
+        createTooltips : function() {
+            var lines = this.currentEditor.getSession().getLength();
+            for (var i = 0; i < lines; i++) {
+                var annotation = this.annotations[this.currentFile][i.toString];
+                if (annotation) {
+                    //create tooltip for this annotation
+                    var nextAnnotation;
+                    while (++i < lines && this.annotation[this.currentFile][i.toString]) {
+                        nextAnnotation = this.annotation[this.currentFile][i.toString];
+                        if (nextAnnotation.type == annotation.type) {
+                            //merge annotation text
+                        }
+                    }
+                }
+            }
+        },
+        
+        belongsToGroup : function(annotation) {
+            
         },
         
         createTooltip : function(annotation) {
@@ -113,7 +133,7 @@ module.exports = (function() {
             }
         },
 
-    	onTabSwitch : function(e){
+        onTabSwitch : function(e){
             var closed_file = e.currentTarget.$activepage? this.getFilePath(e.currentTarget.$activepage.id) : undefined;
             var opened_file = this.getFilePath(e.nextPage.id);
             this.currentFile = opened_file;
@@ -143,14 +163,13 @@ module.exports = (function() {
             //maintain gutter tooltips
             this.currentEditor.renderer.scrollBar.addEventListener("scroll", this.onScroll.bind(this));
         },
+        
         decorate : function(filename) {
             if (filename != this.currentFile) {
                 return;
-            } else {
-                
             }
-                
-                
+            //this.createTooltips();
+            
             if (this.all_changes[this.currentFile].unstaged && this.all_changes[this.currentFile].staged) {
                 //add gutter decoration for all annotations
                 var annotations = this.annotations[this.currentFile];
@@ -276,7 +295,7 @@ module.exports = (function() {
             var firstLineIndex = renderer.getFirstVisibleRow();
             var lastLineIndex = renderer.getLastVisibleRow();
             
-            if (firstLineIndex <= annotation.row && lastLineIndex > annotation.row) {
+            if (firstLineIndex < annotation.row && lastLineIndex > annotation.row) {
                 var prevCell = gutterLayer.firstChild;
                 var nextCell = prevCell.nextSibling;
                 

@@ -164,7 +164,7 @@ module.exports = (function() {
 
         addUnstagedChanges : function(output, parser) {
             var changes = parser.parseDiff(output.data, output.stream);
-            var filename = output.args[output.args.length];
+            var filename = output.args[output.args.length-1];
             if (!this.all_changes[filename]) {
                 this.all_changes[filename] = {};
             }
@@ -184,7 +184,7 @@ module.exports = (function() {
 
         addStagedChanges : function(output, parser) {
             var changes = parser.parseDiff(output.data, output.stream);
-            var filename = output.args[output.args.length];
+            var filename = output.args[output.args.length-1];
             if (!this.all_changes[filename]) {
                 this.all_changes[filename] = {};
             }

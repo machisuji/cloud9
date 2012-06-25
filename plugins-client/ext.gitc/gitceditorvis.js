@@ -314,6 +314,19 @@ module.exports = (function() {
                 
                 gutterLayer.insertBefore(cell, nextCell);
             }
+        },
+        
+        //replaces all numbers in gutter by contents of replace (array of strings) starting at line index "from"
+        replaceGutterNumbers : function(from, replace) {
+            var gutterCells = document.getElementsByClassName("ace_gutter-cell");
+            var firstLineIndex = this.currentEditor.renderer.getFirstVisibleRow();
+            if (firstLineIndex <= from) {
+                from -= firstLineIndex;
+                for (var i = 0; i < replace.length; i++) {
+                    var gutterCell = gutterCells[i+from];
+                    gutterCell.innerText = replace[i];
+                }
+            }
         }
 
     };

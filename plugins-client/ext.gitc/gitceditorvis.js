@@ -117,6 +117,10 @@ module.exports = (function() {
             var closed_file = e.currentTarget.$activepage? this.getFilePath(e.currentTarget.$activepage.id) : undefined;
             var opened_file = this.getFilePath(e.nextPage.id);
             this.currentFile = opened_file;
+
+            if (e.nextPage.$editor.path !== "ext/code/code")
+                return;
+
             this.currentEditor = e.nextPage.$editor.amlEditor.$editor;
             //document change
             //this.currentEditor.on("change", function(evt) {

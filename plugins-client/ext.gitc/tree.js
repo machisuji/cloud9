@@ -166,7 +166,7 @@ module.exports = ext.register("ext/gitc/tree", {
                 _.each(doc.ranges, function(range) {
                     if (range[0] !== "context") {
                         console.log("mark row " + range[1].start.row + " as " + range[0]);
-                        editor.getSession().addMarker(range[1], "gitc-diff-deleted", "background");
+                        editor.getSession().addMarker(range[1], "gitc-diff-" + range[0], "background");
                     }
                 });
             };

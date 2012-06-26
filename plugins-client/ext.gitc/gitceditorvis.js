@@ -282,7 +282,8 @@ module.exports = (function() {
         },
 
 		onScroll : function(e) {
-            this.addMissingDecoration();
+            if (this.annotations[this.currentFile]) 
+                this.addMissingDecoration();
             
             /*for (var i in this.annotations[this.currentFile]) {
                 var annotation = this.annotations[this.currentFile][i];

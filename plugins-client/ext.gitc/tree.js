@@ -160,7 +160,7 @@ module.exports = ext.register("ext/gitc/tree", {
         });
 
         ide.addEventListener("afteropenfile", function(e) {
-            var doc = e.doc; if (!doc.ranges) return true;
+            var doc = e.doc; if (!doc.editor || !doc.ranges) return true;
             var editor = e.editor.amlEditor;
             var markRows = function markRows() {
                 _.each(doc.ranges, function(range) {
@@ -176,7 +176,7 @@ module.exports = ext.register("ext/gitc/tree", {
 
     showDiff: function showDiff(title, diff, ranges) {
         var node = apf.getXml('<file newfile="1" type="file" size="" changed="1" '
-                + 'name="' + title + '" path="/workspace/new" contenttype="text/plain; charset=utf-8" '
+                + 'name="' + title + ' diff" path="diff for ' + title + '" contenttype="text/plain; charset=utf-8" '
                 + 'modifieddate="" creationdate="" lockable="false" hidden="false" '
                 + 'executable="false"></file>');
         var doc = ide.createDocument(node);
@@ -262,7 +262,7 @@ module.exports = ext.register("ext/gitc/tree", {
                         var no;
                         if (line.status === "deleted") {
                             no = line.number_old - localOffset + globalOffset;
-                            globalOffset += 1;
+                            localOffset -= 1;
                         } else {
                             no = line.number_new - localOffset + globalOffset;
                         }
@@ -273,7 +273,7 @@ module.exports = ext.register("ext/gitc/tree", {
                     return result;
                 }), true /* flatten only one level */);
 
-                _self.showDiff(node.getAttribute("path") + " diff", content, ranges);
+                _self.showDiff(node.getAttribute("path"), content, ranges);
             });
         });
     },

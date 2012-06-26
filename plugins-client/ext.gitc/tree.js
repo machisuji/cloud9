@@ -280,13 +280,23 @@ module.exports = ext.register("ext/gitc/tree", {
 
                     _self.showDiff(node.getAttribute("path"), content, ranges);
                 });
-            } else {
+            } else if (node.getAttribute("status") == "added") {
                 var Range = require("ace/range").Range;
                 gcc.send("cat " + node.getAttribute("path"), function(output) {
                     var lines = output.data.split("\n");
                     var ranges = [["added", new Range(0, 0, lines.length, 10)]];
                     for (var i = 0; i < lines.length; ++i) {
                         lines[i] = "+" + lines[i];
+                    }
+                    _self.showDiff(node.getAttribute("path"), lines.join("\n"), ranges);
+                });
+            } else if (node.getAttribute("status") == "removed") {
+                var Range = require("ace/range").Range;
+                gcc.send("git show HEAD:" + node.getAttribute("path"), function(output) {
+                    var lines = output.data.split("\n");
+                    var ranges = [["deleted", new Range(0, 0, lines.length, 10)]];
+                    for (var i = 0; i < lines.length; ++i) {
+                        lines[i] = "-" + lines[i];
                     }
                     _self.showDiff(node.getAttribute("path"), lines.join("\n"), ranges);
                 });

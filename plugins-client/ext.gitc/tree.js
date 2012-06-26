@@ -62,6 +62,25 @@ function elem(label, attr) {
     return e;
 }
 
+function ranges(is, result) {
+  result = result || [];
+  if (is.length === 0) return result;
+  if (result.length === 0) {
+    return ranges(is.slice(1), [[is[0], is[0]]]);
+  } else {
+    var range = result[result.length - 1];
+    var head = is[0];
+
+    if (range[1] + 1 === head) {
+      range[1] = head;
+      return ranges(is.slice(1), result);
+    } else {
+      result.push([head, head]);
+      return ranges(is.slice(1), result);
+    }
+  }
+}
+
 module.exports = ext.register("ext/gitc/tree", {
     name             : "gitc diff tree",
     dev              : "Markus Kahl, Stephanie Platz, Patrick Schilf",
@@ -134,6 +153,39 @@ module.exports = ext.register("ext/gitc/tree", {
                 _self.loadedSettings = 2;
             }
         });
+
+        ide.addEventListener("beforesavewarn", function(e) {
+            var diff = e.doc.type === "diff";
+            return !diff;
+        });
+
+        ide.addEventListener("afteropenfile", function(e) {
+            var doc = e.doc; if (!doc.editor || !doc.ranges) return true;
+            var editor = e.editor.amlEditor;
+            var markRows = function markRows() {
+                _.each(doc.ranges, function(range) {
+                    if (range[0] !== "context") {
+                        console.log("mark row " + range[1].start.row + " as " + range[0]);
+                        editor.getSession().addMarker(range[1], "gitc-diff-" + range[0], "background");
+                    }
+                });
+            };
+            setTimeout(markRows, 100);
+        });
+    },
+
+    showDiff: function showDiff(title, diff, ranges) {
+        var node = apf.getXml('<file newfile="1" type="file" size="" changed="1" '
+                + 'name="' + title + ' diff" path="diff for ' + title + '" contenttype="text/plain; charset=utf-8" '
+                + 'modifieddate="" creationdate="" lockable="false" hidden="false" '
+                + 'executable="false"></file>');
+        var doc = ide.createDocument(node);
+        doc.setValue(diff);
+        doc.type = "diff";
+        doc.ranges = ranges;
+        ide.dispatchEvent("openfile", {doc: doc, type: "newfile"});
+
+        return doc;
     },
 
     /**
@@ -166,6 +218,7 @@ module.exports = ext.register("ext/gitc/tree", {
 
     onReady : function() {
         var _self = this;
+        var gcc = require("ext/gitc/gitc").gitcCommands;
 
         require("ext/gitc/gitc").gitcCommands.send("git status -s", function(output, parser) {
             var st = parser.parseShortStatus(output.data, output.stream);
@@ -184,6 +237,44 @@ module.exports = ext.register("ext/gitc/tree", {
                 stageFiles.slideToggle(apf.xmldb.getHtmlNode(stageRoot, stageFiles), 1, true, null, null);
             }
             _self.ready = true;
+        });
+
+        diffFiles.addEventListener("afterchoose", this.$afterchoose = function() {
+            var node = this.selected;
+            if (!node || node.tagName != "file" || this.selection.length > 1 ||
+                !ide.onLine && !ide.offlineFileSystemSupport) //ide.onLine can be removed after update apf
+                    return;
+
+            gcc.send("git diff " + node.getAttribute("path"), function(output, parser) {
+                var result = parser.parseDiff(output.data, output.stream)[0];
+                var chunks = result.chunks;
+                var content = "";
+                for (var i = 0; i < chunks.length; ++i) {
+                    content += chunks[i].header + "\n";
+                    content += chunks[i].text;
+                }
+                var Range = require("ace/range").Range
+                var globalOffset = 1;
+                var ranges = _.flatten(_.map(chunks, function(chunk) {
+                    var localOffset = chunk.header.match("\\+[0-9]+");
+                    localOffset -= 1;
+                    var result = [["context", chunk.header]].concat(_.map(chunk.lines, function(line) {
+                        var no;
+                        if (line.status === "deleted") {
+                            no = line.number_old - localOffset + globalOffset;
+                            localOffset -= 1;
+                        } else {
+                            no = line.number_new - localOffset + globalOffset;
+                        }
+                        return [line.status, new Range(no, 0, no, 10)];
+                    }));
+                    globalOffset += chunk.text.split("\n").length;
+
+                    return result;
+                }), true /* flatten only one level */);
+
+                _self.showDiff(node.getAttribute("path"), content, ranges);
+            });
         });
     },
 

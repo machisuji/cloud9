@@ -33,7 +33,7 @@ module.exports = (function() {
                 //this.currentEditor.renderer.addGutterDecoration(annotation.row, "gitc-removed");
             };
             
-            this.addTooltip(annotation);
+            //this.addTooltip(annotation);
             
         },
         
@@ -45,23 +45,47 @@ module.exports = (function() {
             status: status
           };
           
-          this.createTooltip(annotation);
+          //this.createTooltip(annotation);
           return annotation;
         },
         
         createTooltips : function() {
             var lines = this.currentEditor.getSession().getLength();
-            for (var i = 0; i < lines; i++) {
-                var annotation = this.annotations[this.currentFile][i.toString];
+            for (var i = 1; i <= lines; i++) {
+                var annotation = this.annotations[this.currentFile][i.toString()];
                 if (annotation) {
                     //create tooltip for this annotation
-                    var nextAnnotation;
+                    var p = document.createElement('p');
+                    p.innerText = annotation.text;
+                    
+                    annotation.tooltip = document.createElement('div');
+                    annotation.tooltip.className = 'gitc-tooltip';
+                    annotation.tooltip.appendChild(p);
+                    
+                    var commitLink = document.createElement('a');
+                    commitLink.innerText = "Commit";
+                    commitLink.setAttribute("onclick", function(e) {
+                        console.log('Commit all changes belonging to this chunk.');
+                    });
+                    
+                    var revertLink = document.createElement('a');
+                    revertLink.innerText = "Revert";
+                    revertLink.setAttribute("onclick", function(e) {
+                        console.log('Revert all changes belonging to this chunk.');
+                    });
+                    
+                    var commitRevertP = document.createElement('p');
+                    commitRevertP.appendChild(commitLink);
+                    commitRevertP.appendChild(revertLink);
+                    annotation.tooltip.appendChild(commitRevertP);
+                    
+                    /*var nextAnnotation;
                     while (++i < lines && this.annotation[this.currentFile][i.toString]) {
                         nextAnnotation = this.annotation[this.currentFile][i.toString];
                         if (nextAnnotation.type == annotation.type) {
                             //merge annotation text
                         }
-                    }
+                    }*/
                 }
             }
         },
@@ -102,7 +126,6 @@ module.exports = (function() {
             var commitRevertDiv = document.createElement('div');
             commitRevertDiv.appendChild(commitLink);
             commitRevertDiv.appendChild(revertLink);
-            
             
             if (nextAnno && nextAnno.type == annotation.type) {
                 annotation.text += "\n" + nextAnno.text;
@@ -168,7 +191,7 @@ module.exports = (function() {
             if (filename != this.currentFile) {
                 return;
             }
-            //this.createTooltips();
+            this.createTooltips();
             
             if (this.all_changes[this.currentFile].unstaged && this.all_changes[this.currentFile].staged) {
                 //add gutter decoration for all annotations
@@ -259,60 +282,44 @@ module.exports = (function() {
         },
 
 		onScroll : function(e) {
-            for (var i in this.annotations[this.currentFile]) {
+            this.addMissingDecoration();
+            
+            /*for (var i in this.annotations[this.currentFile]) {
                 var annotation = this.annotations[this.currentFile][i];
                 if (annotation.type == "deleted") {
-                    this.decorateAsDeleted(annotation);
+                    
                 }
-                this.addTooltip(annotation);
-			}
+                
+			}*/
 		},
         
-        addTooltip : function(annotation) {
-            if (!annotation.tooltip)
-				return;
-
-			var gutterLayer = document.getElementById('q11').children[2].children[1];
-            var renderer = this.currentEditor.renderer;
-            var firstLineIndex = renderer.getFirstVisibleRow();
-            var lastLineIndex = renderer.getLastVisibleRow();
-            if (firstLineIndex < annotation.row && lastLineIndex >= annotation.row) {
-                var el = gutterLayer.firstChild;
-                while (el.innerText != annotation.row.toString()) {
-                    el = el.nextSibling;
-                }
-                if (annotation.type == "deleted") {
-                    el.nextSibling.appendChild(annotation.tooltip);
-                } else {
-                    el.appendChild(annotation.tooltip);
-                }
-            }
-        },
-        
-        decorateAsDeleted : function(annotation) {
-            var gutterLayer = document.getElementById('q11').children[2].children[1];
-            var renderer = this.currentEditor.renderer;
-            var firstLineIndex = renderer.getFirstVisibleRow();
-            var lastLineIndex = renderer.getLastVisibleRow();
-            
-            if (firstLineIndex < annotation.row && lastLineIndex > annotation.row) {
-                var prevCell = gutterLayer.firstChild;
-                var nextCell = prevCell.nextSibling;
+        addMissingDecoration : function() {
+            var gutterCells = document.getElementsByClassName('ace_gutter-cell');
+            var firstLineIndex = this.currentEditor.renderer.getFirstVisibleRow();
+            for (var i = 0; i < gutterCells.length; i++) {
+                var annotation = this.annotations[this.currentFile][(firstLineIndex+i).toString()];
+                if (!annotation)
+                    continue;
+                    
+                var cell = gutterCells[i];
                 
-                while (prevCell.innerText != annotation.row.toString()) {
-                    prevCell = prevCell.nextSibling;
-                    nextCell = prevCell.nextSibling;
+                //add deleted line marker, if not at start of visible gutter area (otherwise, marker would not be visible anyway)
+                if (annotation.type == "deleted" && i > 0) {
+                    var marker = document.createElement('div');
+                    marker.classList.add("ace_gutter-cell");
+                    marker.classList.add("gitc-removed");
+                    marker.setAttribute("style", "height: 2px");
+                    
+                    cell.setAttribute("style", "height: 15px");
+                    cell.previousSibling.setAttribute("style", "height: 15px");
+                    cell.parentNode.insertBefore(marker, cell);
+                    cell = marker;
                 }
                 
-                var cell = document.createElement('div');
-                cell.classList.add("ace_gutter-cell");
-                cell.classList.add("gitc-removed");
-                cell.setAttribute("style", "height: 2px");
-                
-                prevCell.setAttribute("style", "height: 15px");
-                nextCell.setAttribute("style", "height: 15px");
-                
-                gutterLayer.insertBefore(cell, nextCell);
+                //add tooltip
+                if (annotation.tooltip) {
+                    cell.appendChild(annotation.tooltip);
+                }
             }
         },
         

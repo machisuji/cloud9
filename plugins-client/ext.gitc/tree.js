@@ -281,10 +281,14 @@ module.exports = ext.register("ext/gitc/tree", {
                     _self.showDiff(node.getAttribute("path"), content, ranges);
                 });
             } else {
-                var Range = require("ace/range").Range
+                var Range = require("ace/range").Range;
                 gcc.send("cat " + node.getAttribute("path"), function(output) {
-                    _self.showDiff(node.getAttribute("path"), output.data,
-                        ["added", new Range(output.data.split("\n").length, 0, output.data.split("\n").length, 10)]);
+                    var lines = output.data.split("\n");
+                    var ranges = [["added", new Range(0, 0, lines.length, 10)]];
+                    for (var i = 0; i < lines.length; ++i) {
+                        lines[i] = "+" + lines[i];
+                    }
+                    _self.showDiff(node.getAttribute("path"), lines.join("\n"), ranges);
                 });
             }
         });

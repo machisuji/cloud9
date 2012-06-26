@@ -246,27 +246,31 @@ module.exports = ext.register("ext/gitc/tree", {
                     return;
 
             gcc.send("git diff " + node.getAttribute("path"), function(output, parser) {
-                var result = parser.parseDiff(output.data, output.stream)[0];
+                var result = parser.parseDiff(output.data, output.stream, true)[0];
                 var chunks = result.chunks;
                 var content = "";
                 for (var i = 0; i < chunks.length; ++i) {
                     content += chunks[i].header + "\n";
-                    content += chunks[i].text;
+                    content += chunks[i].text + "\n";
                 }
                 var Range = require("ace/range").Range
-                var globalOffset = 1;
+                var globalOffset = 0;
                 var ranges = _.flatten(_.map(chunks, function(chunk) {
                     var localOffset = chunk.header.match("\\+[0-9]+");
+                    var lineRange = function lineRange(no) {
+                        return new Range(no, 0, no, 10);
+                    };
+                    globalOffset += 1; // chunk header
                     localOffset -= 1;
-                    var result = [["context", chunk.header]].concat(_.map(chunk.lines, function(line) {
+                    var result = [["context", lineRange(globalOffset)]].concat(_.map(chunk.lines, function(line) {
                         var no;
                         if (line.status === "deleted") {
-                            no = line.number_old - localOffset + globalOffset;
+                            no = line.number_new - localOffset + globalOffset;
                             localOffset -= 1;
                         } else {
                             no = line.number_new - localOffset + globalOffset;
                         }
-                        return [line.status, new Range(no, 0, no, 10)];
+                        return [line.status, lineRange(no)];
                     }));
                     globalOffset += chunk.text.split("\n").length;
 

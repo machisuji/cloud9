@@ -270,7 +270,7 @@ module.exports = ext.register("ext/gitc/tree", {
                         } else {
                             no = line.number_new - localOffset + globalOffset;
                         }
-                        return [line.status, lineRange(no)];
+                        return [line.status, lineRange(no - 1)];
                     }));
                     globalOffset += chunk.text.split("\n").length;
 

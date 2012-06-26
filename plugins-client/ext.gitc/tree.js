@@ -161,7 +161,7 @@ module.exports = ext.register("ext/gitc/tree", {
 
         ide.addEventListener("afteropenfile", function(e) {
             var doc = e.doc; if (!doc.editor || !doc.ranges) return true;
-            var editor = e.editor.amlEditor;
+            var editor = e.editor.amlEditor.$editor;
             var markRows = function markRows() {
                 _.each(doc.ranges, function(range) {
                     if (range[0] !== "context") {

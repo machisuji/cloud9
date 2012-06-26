@@ -1,18 +1,21 @@
 .ace_marker-layer .gitc-diff-deleted {
   background: #fcc;
+  position: absolute;
 }
 
 .ace_marker-layer .gitc-diff-added {
   background: #cfc;
+  position: absolute;
 }
 
 .ace_marker-layer .gitc-diff-modified {
   background: #ccf;
+  position: absolute;
 }
 
 .ace_gutter-cell.gitc-removed {
     background-color: rgb(255, 0, 0);
-	color: rgba(255, 0, 0, 0.8);
+    color: rgba(255, 0, 0, 0.8);
     height: 2px;
 }
 

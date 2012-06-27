@@ -165,16 +165,21 @@ module.exports = ext.register("ext/gitc/tree", {
             var markRows = function markRows() {
                 _.each(doc.ranges, function(range) {
                     if (range[0] !== "context") {
-                        console.log("mark row " + range[1].start.row + " as " + range[0]);
                         editor.getSession().addMarker(range[1], "gitc-diff-" + range[0], "background");
                     }
                 });
+                var gutter = function() {
+                    require("ext/gitc/gitc").gitEditorVis.updateLineNumbers(doc.lines);
+                };
+                if (doc.lines) {
+                    setTimeout(gutter, 2000);
+                }
             };
-            setTimeout(markRows, 100);
+            setTimeout(markRows, 25);
         });
     },
 
-    showDiff: function showDiff(title, diff, ranges) {
+    showDiff: function showDiff(title, diff, ranges, lines) {
         var node = apf.getXml('<file newfile="1" type="file" size="" changed="1" '
                 + 'name="' + title + ' diff" path="diff for ' + title + '" contenttype="text/plain; charset=utf-8" '
                 + 'modifieddate="" creationdate="" lockable="false" hidden="false" '
@@ -183,6 +188,7 @@ module.exports = ext.register("ext/gitc/tree", {
         doc.setValue(diff);
         doc.type = "diff";
         doc.ranges = ranges;
+        doc.lines = lines;
         ide.dispatchEvent("openfile", {doc: doc, type: "newfile"});
 
         return doc;
@@ -278,15 +284,31 @@ module.exports = ext.register("ext/gitc/tree", {
                         return result;
                     }), true /* flatten only one level */);
 
-                    _self.showDiff(node.getAttribute("path"), content, ranges);
+                    var lines = _.flatten(_.map(chunks, function(chunk) {
+                        return ["---"].concat(_.map(chunk.lines, function(line) {
+                            return line.number_new;
+                        }));
+                    }), true /* flatten only one level */);
+
+                    _self.showDiff(node.getAttribute("path"), content, ranges, lines);
                 });
-            } else {
+            } else if (node.getAttribute("status") == "added") {
                 var Range = require("ace/range").Range;
                 gcc.send("cat " + node.getAttribute("path"), function(output) {
                     var lines = output.data.split("\n");
                     var ranges = [["added", new Range(0, 0, lines.length, 10)]];
                     for (var i = 0; i < lines.length; ++i) {
                         lines[i] = "+" + lines[i];
+                    }
+                    _self.showDiff(node.getAttribute("path"), lines.join("\n"), ranges);
+                });
+            } else if (node.getAttribute("status") == "removed") {
+                var Range = require("ace/range").Range;
+                gcc.send("git show HEAD:" + node.getAttribute("path"), function(output) {
+                    var lines = output.data.split("\n");
+                    var ranges = [["deleted", new Range(0, 0, lines.length, 10)]];
+                    for (var i = 0; i < lines.length; ++i) {
+                        lines[i] = "-" + lines[i];
                     }
                     _self.showDiff(node.getAttribute("path"), lines.join("\n"), ranges);
                 });

@@ -167,8 +167,8 @@ module.exports = (function() {
             this.currentEditor = e.nextPage.$editor.amlEditor.$editor;
             this.undecorate(closed_file);
 
-            if (opened_file.indexOf("diff of ") === 0) {
-                var gutter = this.currentEditor.renderer.$guttrLayer;
+            if (opened_file.indexOf("diff for ") !== 0) {
+                var gutter = this.currentEditor.renderer.$gutterLayer;
                 if (gutter.$originalUpdate) {
                     gutter.update = gutter.$originalUpdate;
                     gutter.$originalUpdate = undefined;

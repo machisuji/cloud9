@@ -165,16 +165,21 @@ module.exports = ext.register("ext/gitc/tree", {
             var markRows = function markRows() {
                 _.each(doc.ranges, function(range) {
                     if (range[0] !== "context") {
-                        console.log("mark row " + range[1].start.row + " as " + range[0]);
                         editor.getSession().addMarker(range[1], "gitc-diff-" + range[0], "background");
                     }
                 });
+                var gutter = function() {
+                    require("ext/gitc/gitc").gitEditorVis.replaceGutterNumbers(0, doc.lines)
+                };
+                if (false && doc.lines) {
+                    setTimeout(gutter, 2000);
+                }
             };
-            setTimeout(markRows, 100);
+            setTimeout(markRows, 25);
         });
     },
 
-    showDiff: function showDiff(title, diff, ranges) {
+    showDiff: function showDiff(title, diff, ranges, lines) {
         var node = apf.getXml('<file newfile="1" type="file" size="" changed="1" '
                 + 'name="' + title + ' diff" path="diff for ' + title + '" contenttype="text/plain; charset=utf-8" '
                 + 'modifieddate="" creationdate="" lockable="false" hidden="false" '
@@ -183,6 +188,7 @@ module.exports = ext.register("ext/gitc/tree", {
         doc.setValue(diff);
         doc.type = "diff";
         doc.ranges = ranges;
+        doc.lines = lines;
         ide.dispatchEvent("openfile", {doc: doc, type: "newfile"});
 
         return doc;
@@ -245,40 +251,68 @@ module.exports = ext.register("ext/gitc/tree", {
                 !ide.onLine && !ide.offlineFileSystemSupport) //ide.onLine can be removed after update apf
                     return;
 
-            gcc.send("git diff " + node.getAttribute("path"), function(output, parser) {
-                var result = parser.parseDiff(output.data, output.stream, true)[0];
-                var chunks = result.chunks;
-                var content = "";
-                for (var i = 0; i < chunks.length; ++i) {
-                    content += chunks[i].header + "\n";
-                    content += chunks[i].text + "\n";
-                }
-                var Range = require("ace/range").Range
-                var globalOffset = 0;
-                var ranges = _.flatten(_.map(chunks, function(chunk) {
-                    var localOffset = chunk.header.match("\\+[0-9]+");
-                    var lineRange = function lineRange(no) {
-                        return new Range(no, 0, no, 10);
-                    };
-                    globalOffset += 1; // chunk header
-                    localOffset -= 1;
-                    var result = [["context", lineRange(globalOffset)]].concat(_.map(chunk.lines, function(line) {
-                        var no;
-                        if (line.status === "deleted") {
-                            no = line.number_new - localOffset + globalOffset;
-                            localOffset -= 1;
-                        } else {
-                            no = line.number_new - localOffset + globalOffset;
-                        }
-                        return [line.status, lineRange(no)];
-                    }));
-                    globalOffset += chunk.text.split("\n").length;
+            if (node.getAttribute("status") == "changed") {
+                gcc.send("git diff " + node.getAttribute("path"), function(output, parser) {
+                    var result = parser.parseDiff(output.data, output.stream, true)[0];
+                    var chunks = result.chunks;
+                    var content = "";
+                    for (var i = 0; i < chunks.length; ++i) {
+                        content += chunks[i].header + "\n";
+                        content += chunks[i].text + "\n";
+                    }
+                    var Range = require("ace/range").Range
+                    var globalOffset = 0;
+                    var ranges = _.flatten(_.map(chunks, function(chunk) {
+                        var localOffset = chunk.header.match("\\+[0-9]+");
+                        var lineRange = function lineRange(no) {
+                            return new Range(no, 0, no, 10);
+                        };
+                        globalOffset += 1; // chunk header
+                        localOffset -= 1;
+                        var result = [["context", lineRange(globalOffset)]].concat(_.map(chunk.lines, function(line) {
+                            var no;
+                            if (line.status === "deleted") {
+                                no = line.number_new - localOffset + globalOffset;
+                                localOffset -= 1;
+                            } else {
+                                no = line.number_new - localOffset + globalOffset;
+                            }
+                            return [line.status, lineRange(no - 1)];
+                        }));
+                        globalOffset += chunk.text.split("\n").length;
 
-                    return result;
-                }), true /* flatten only one level */);
+                        return result;
+                    }), true /* flatten only one level */);
 
-                _self.showDiff(node.getAttribute("path"), content, ranges);
-            });
+                    var lines = _.flatten(_.map(chunks, function(chunk) {
+                        return [[""]].concat(_.map(chunk.lines, function(line) {
+                            return line.number_new;
+                        }));
+                    }), true /* flatten only one level */);
+
+                    _self.showDiff(node.getAttribute("path"), content, ranges, lines);
+                });
+            } else if (node.getAttribute("status") == "added") {
+                var Range = require("ace/range").Range;
+                gcc.send("cat " + node.getAttribute("path"), function(output) {
+                    var lines = output.data.split("\n");
+                    var ranges = [["added", new Range(0, 0, lines.length, 10)]];
+                    for (var i = 0; i < lines.length; ++i) {
+                        lines[i] = "+" + lines[i];
+                    }
+                    _self.showDiff(node.getAttribute("path"), lines.join("\n"), ranges);
+                });
+            } else if (node.getAttribute("status") == "removed") {
+                var Range = require("ace/range").Range;
+                gcc.send("git show HEAD:" + node.getAttribute("path"), function(output) {
+                    var lines = output.data.split("\n");
+                    var ranges = [["deleted", new Range(0, 0, lines.length, 10)]];
+                    for (var i = 0; i < lines.length; ++i) {
+                        lines[i] = "-" + lines[i];
+                    }
+                    _self.showDiff(node.getAttribute("path"), lines.join("\n"), ranges);
+                });
+            }
         });
     },
 

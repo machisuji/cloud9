@@ -169,9 +169,9 @@ module.exports = ext.register("ext/gitc/tree", {
                     }
                 });
                 var gutter = function() {
-                    require("ext/gitc/gitc").gitEditorVis.replaceGutterNumbers(0, doc.lines)
+                    require("ext/gitc/gitc").gitEditorVis.updateLineNumbers(doc.lines);
                 };
-                if (false && doc.lines) {
+                if (doc.lines) {
                     setTimeout(gutter, 2000);
                 }
             };
@@ -285,7 +285,7 @@ module.exports = ext.register("ext/gitc/tree", {
                     }), true /* flatten only one level */);
 
                     var lines = _.flatten(_.map(chunks, function(chunk) {
-                        return [[""]].concat(_.map(chunk.lines, function(line) {
+                        return ["---"].concat(_.map(chunk.lines, function(line) {
                             return line.number_new;
                         }));
                     }), true /* flatten only one level */);

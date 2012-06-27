@@ -23,18 +23,10 @@ module.exports = (function() {
 			var session = this.currentEditor.getSession();
             
             if (annotation.type == "added") {
-                //this.currentEditor.getSession().addMarker(new Range(annotation.row, 1, annotation.row, 10), "gitc-added", "background");
                 this.currentEditor.renderer.addGutterDecoration(annotation.row, "gitc-added");
             } else if (annotation.type == "changed") {
-                //this.currentEditor.getSession().addMarker(new Range(annotation.row, 1, annotation.row, 10), "gitc-changed", "background");
                 this.currentEditor.renderer.addGutterDecoration(annotation.row, "gitc-changed");
-            //} else if (annotation.type == "deleted") {
-                //this.currentEditor.getSession().addMarker(new Range(annotation.row, 1, annotation.row, 10), "gitc-removed", "background");
-                //this.currentEditor.renderer.addGutterDecoration(annotation.row, "gitc-removed");
             };
-            
-            //this.addTooltip(annotation);
-            
         },
         
         createAnnotation : function(line, type, msg, status) {
@@ -42,10 +34,10 @@ module.exports = (function() {
             row: line,
             type: type,
             text: msg,
-            status: status
+            status: status,
+            tooltip: undefined
           };
           
-          //this.createTooltip(annotation);
           return annotation;
         },
         
@@ -68,74 +60,19 @@ module.exports = (function() {
                         console.log('Commit all changes belonging to this chunk.');
                     });
                     
-                    var revertLink = document.createElement('a');
+                    var revertLink = document.createElement('a'); //button to revert
                     revertLink.innerText = "Revert";
                     revertLink.setAttribute("onclick", function(e) {
                         console.log('Revert all changes belonging to this chunk.');
                     });
                     
-                    var commitRevertP = document.createElement('p');
+                    var commitRevertP = document.createElement('p'); //button to commit
+                    commitRevertP.className = "gitc-commit-revert";
                     commitRevertP.appendChild(commitLink);
                     commitRevertP.appendChild(revertLink);
                     annotation.tooltip.appendChild(commitRevertP);
-                    
-                    /*var nextAnnotation;
-                    while (++i < lines && this.annotation[this.currentFile][i.toString]) {
-                        nextAnnotation = this.annotation[this.currentFile][i.toString];
-                        if (nextAnnotation.type == annotation.type) {
-                            //merge annotation text
-                        }
-                    }*/
                 }
             }
-        },
-        
-        belongsToGroup : function(annotation) {
-            
-        },
-        
-        createTooltip : function(annotation) {
-          if (annotation.type == "added")
-		  	return;
-          var prevAnno = this.annotations[this.currentFile][(annotation.row-1).toString()];
-          var nextAnno = this.annotations[this.currentFile][(annotation.row+1).toString()];
-          
-          var p = document.createElement('p');
-          p.innerText = annotation.text;
-		  
-		  if (prevAnno && prevAnno.type == annotation.type) {
-			prevAnno.text += "\n" + annotation.text;
-			prevAnno.tooltip.insertBefore(p, prevAnno.tooltip.lastChild);
-		  } else {
-    	    annotation.tooltip = document.createElement('div');
-            annotation.tooltip.className = 'gitc-tooltip';
-            annotation.tooltip.appendChild(p);
-            
-            var commitLink = document.createElement('a');
-            commitLink.innerText = "Commit";
-            commitLink.onClick = function(e) {
-              //commit changes of this annotation  
-            };
-            
-            var revertLink = document.createElement('a');
-            revertLink.innerText = "Revert";
-            revertLink.onClick = function(e) {
-              //revert changes of this annotation  
-            };
-            
-            var commitRevertDiv = document.createElement('div');
-            commitRevertDiv.appendChild(commitLink);
-            commitRevertDiv.appendChild(revertLink);
-            
-            if (nextAnno && nextAnno.type == annotation.type) {
-                annotation.text += "\n" + nextAnno.text;
-                while(nextAnno.firstChild) {
-                    var firstChild = nextAnno.firstChild;
-                    annotation.tooltip.insertBefore(firstChild, annotation.tooltip.lastChild);
-                    nextAnno.removeChild(firstChild);
-                }
-            }
-		  }
         },
         
         undecorate : function(closedFile) {
@@ -249,9 +186,6 @@ module.exports = (function() {
             this.decorate(filename);
         },
         
-        //Bla
-        //Blub
-
         addStagedChanges : function(output, parser) {
             var changes = parser.parseDiff(output.data, output.stream);
             var filename = output.args[output.args.length-1];
@@ -284,14 +218,6 @@ module.exports = (function() {
 		onScroll : function(e) {
             if (this.annotations[this.currentFile]) 
                 this.addMissingDecoration();
-            
-            /*for (var i in this.annotations[this.currentFile]) {
-                var annotation = this.annotations[this.currentFile][i];
-                if (annotation.type == "deleted") {
-                    
-                }
-                
-			}*/
 		},
         
         addMissingDecoration : function() {

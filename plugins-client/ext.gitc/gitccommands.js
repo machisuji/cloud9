@@ -61,6 +61,11 @@ module.exports = (function() {
             return this.command_id_tracer++;
         },
 
+        /**
+         * Catches the output message of an event.
+         *
+         * @param {apf.AmlEvent} e holds the message and its extra data.
+         */
         onMessage : function(e) {
             var msg = e.message;
 

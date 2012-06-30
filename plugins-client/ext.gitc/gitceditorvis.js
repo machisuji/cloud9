@@ -18,9 +18,64 @@ module.exports = (function() {
     }
 
     GitEditorVis.prototype = {
-        
+
+        onTabSwitch : function(e){
+            if (e.nextPage.$editor.path !== "ext/code/code") {
+                //only code editors are of our concern
+                return;
+            }
+            this.currentFile = this.getFilePath(e.nextPage.id);
+            this.currentEditor = e.nextPage.$editor.amlEditor.$editor;
+
+            this.setGutterUpdateFunction(this.currentFile, this.currentEditor);
+            if (e.currentTarget.$activepage) {
+                var closed_file   = this.getFilePath(e.currentTarget.$activepage.id);
+                var closed_editor = e.currentTarget.$activepage.$editor.amlEditor.$editor;
+                this.undecorate(closed_file, closed_editor);
+            }
+
+            //show unstaged and staged changes
+            this.gitcCommands.send("git diff " + this.currentFile, this.addChanges.bind(this));
+            this.gitcCommands.send("git diff --cached " + this.currentFile, this.addChanges.bind(this));
+            //maintain gutter tooltips
+            this.currentEditor.renderer.scrollBar.addEventListener("scroll", this.onScroll.bind(this));
+        },
+
+        onScroll : function(e) {
+            if (this.annotations[this.currentFile]) 
+                this.addMissingDecoration();
+        },
+
+        getFilePath : function(filePath) {
+            if (typeof filePath === "undefined")
+                filePath = tabEditors.getPage().$model.data.getAttribute("path");
+            if (filePath.indexOf("/workspace/") === 0)
+                filePath = filePath.substr(11);
+
+            return filePath;
+        },
+
+        addChanges : function(output, parser) {
+            var changes = parser.parseDiff(output.data, output.stream);
+            var filename = output.args[output.args.length-1];
+            var kind = output.args.contains("--cached")? "staged" : "unstaged";
+
+            //cache changes
+            if (!this.all_changes[filename]) {
+                this.all_changes[filename] = {};
+            }
+            this.all_changes[filename][kind] = changes;
+            
+            if (changes.length !== 0) {
+                //create annotations for unstaged changes of the current file
+                this.annotateChunks(changes[0].chunks, kind, filename);
+            }
+            
+            this.decorate(filename);
+        },
+
         markGutterLine : function(annotation) {
-			var session = this.currentEditor.getSession();
+            var session = this.currentEditor.getSession();
             
             if (annotation.type == "added") {
                 this.currentEditor.renderer.addGutterDecoration(annotation.row, "gitc-added");
@@ -42,9 +97,14 @@ module.exports = (function() {
         },
         
         createTooltips : function() {
+            if (!this.annotations[this.currentFile]) {
+                return;
+            }
+
+            var file_annotations = this.annotations[this.currentFile]
             var lines = this.currentEditor.getSession().getLength();
             for (var i = 1; i <= lines; i++) {
-                var annotation = this.annotations[this.currentFile][i.toString()];
+                var annotation = file_annotations[i.toString()];
                 if (annotation) {
                     //create tooltip for this annotation
                     var p = document.createElement('p');
@@ -75,53 +135,26 @@ module.exports = (function() {
             }
         },
         
-        undecorate : function(closedFile) {
+        undecorate : function(closedFile, editor) {
             if (this.annotations[closedFile]) {
                 var annotations = this.annotations[closedFile];
                 for (var annotation in annotations) {
-                    this.undecorateGutterLine(annotations[annotation]);
+                    this.undecorateGutterLine(annotations[annotation], editor);
                 }
             }
         },
-        undecorateGutterLine : function(annotation) {
+        undecorateGutterLine : function(annotation, editor) {
             if (annotation.type == "deleted") {
-                this.currentEditor.renderer.removeGutterDecoration(annotation.row, "gitc-removed");
+                editor.renderer.removeGutterDecoration(annotation.row, "gitc-removed");
             } else if (annotation.type == "added") {
-                this.currentEditor.renderer.removeGutterDecoration(annotation.row, "gitc-added");
+                editor.renderer.removeGutterDecoration(annotation.row, "gitc-added");
             } else if (annotation.type == "changed") {
-                this.currentEditor.renderer.removeGutterDecoration(annotation.row, "gitc-changed");
+                editor.renderer.removeGutterDecoration(annotation.row, "gitc-changed");
             }
         },
 
-        onTabSwitch : function(e){
-            var closed_file = e.currentTarget.$activepage? this.getFilePath(e.currentTarget.$activepage.id) : undefined;
-            var opened_file = this.getFilePath(e.nextPage.id);
-            this.currentFile = opened_file;
-
-            if (e.nextPage.$editor.path !== "ext/code/code")
-                return;
-
-            this.currentEditor = e.nextPage.$editor.amlEditor.$editor;
-            this.undecorate(closed_file);
-
-            if (opened_file.indexOf("diff for ") !== 0) {
-                var gutter = this.currentEditor.renderer.$gutterLayer;
-                if (gutter.$originalUpdate) {
-                    gutter.update = gutter.$originalUpdate;
-                    gutter.$originalUpdate = undefined;
-                }
-            }
-            
-            //unstaged changes
-            this.gitcCommands.send("git diff " + opened_file, this.addUnstagedChanges.bind(this));
-            //staged changes
-            this.gitcCommands.send("git diff --cached " + opened_file, this.addStagedChanges.bind(this));
-            //maintain gutter tooltips
-            this.currentEditor.renderer.scrollBar.addEventListener("scroll", this.onScroll.bind(this));
-        },
-        
         decorate : function(filename) {
-            if (filename != this.currentFile) {
+            if (filename !== this.currentFile) {
                 return;
             }
             this.createTooltips();
@@ -134,26 +167,26 @@ module.exports = (function() {
                 }
             }
         },
-        
+
         annotateChunks : function(chunks, status, filename) {
             if (!this.annotations[filename]) {
                 this.annotations[filename] = {};
                 
                 var annotations = this.annotations[filename];
                 for (var i = 0; i < chunks.length; i++) {
-        			var chunk = chunks[i];
-    				for (var j = 0; j < chunk.lines.length; j++) {
-    					var line = chunk.lines[j];
-    					var annotation = this.createAnnotation(line.number_new-1, line.status, line.content, status);
+                    var chunk = chunks[i];
+                    for (var j = 0; j < chunk.lines.length; j++) {
+                        var line = chunk.lines[j];
+                        var annotation = this.createAnnotation(line.number_new-1, line.status, line.content, status);
                         if (this.isChangeAnnotation(annotation, filename)) {
                             annotation.type = "changed";
                         }
-    					annotations[annotation.row.toString()] = annotation;
-    				}
-    			}
+                        annotations[annotation.row.toString()] = annotation;
+                    }
+                }
             }
         },
-        
+
         isChangeAnnotation : function(annotation, filename) {
             var key = annotation.row.toString();
             var other = this.annotations[filename][key];
@@ -162,60 +195,6 @@ module.exports = (function() {
                 annotation.type == "added" && other.type == "deleted");
         },
 
-        addUnstagedChanges : function(output, parser) {
-            var changes = parser.parseDiff(output.data, output.stream);
-            var filename = output.args[output.args.length-1];
-            if (!this.all_changes[filename]) {
-                this.all_changes[filename] = {};
-            }
-            this.all_changes[filename].unstaged = changes;
-            
-            if (changes.length == 0) {
-                return;
-            }
-            
-            //create annotations for unstaged changes
-            for (var i = 0; i < changes.length; i++) {
-    			var change = changes[i];
-				this.annotateChunks(change.chunks, "unstaged", filename);
-			}
-            this.decorate(filename);
-        },
-        
-        addStagedChanges : function(output, parser) {
-            var changes = parser.parseDiff(output.data, output.stream);
-            var filename = output.args[output.args.length-1];
-            if (!this.all_changes[filename]) {
-                this.all_changes[filename] = {};
-            }
-            this.all_changes[filename].staged = changes;
-            
-            if (changes.length == 0) {
-                return;
-            }
-            
-            //create annotations for unstaged changes
-            for (var i = 0; i < changes.length; i++) {
-        		var change = changes[i];
-				this.annotateChunks(change.chunks, "staged", filename);
-			}
-            this.decorate(filename);
-        },
-
-        getFilePath : function(filePath) {
-            if (typeof filePath === "undefined")
-                filePath = tabEditors.getPage().$model.data.getAttribute("path");
-            if (filePath.indexOf("/workspace/") === 0)
-                filePath = filePath.substr(11);
-
-            return filePath;
-        },
-
-		onScroll : function(e) {
-            if (this.annotations[this.currentFile]) 
-                this.addMissingDecoration();
-		},
-        
         addMissingDecoration : function() {
             var gutterCells = document.getElementsByClassName('ace_gutter-cell');
             var firstLineIndex = this.currentEditor.renderer.getFirstVisibleRow();
@@ -248,80 +227,94 @@ module.exports = (function() {
         
         updateLineNumbers : function(lines) {
             var firstLineIndex = this.currentEditor.renderer.getFirstVisibleRow();
-            var lastLineIndex = this.currentEditor.renderer.getLastVisibleRow();
-            var dom = require("ace/lib/dom");
-            var oop = require("ace/lib/oop");
-            var EventEmitter = require("ace/lib/event_emitter").EventEmitter;
-
-
-            this.currentEditor.renderer.$gutterLayer.$originalUpdate = 
-                this.currentEditor.renderer.$gutterLayer.update;
-            var update = function(config) {
-                if (config.lines) {
-                    this.lines = config.lines;
-                } else {
-                    this.$config = config;
-                    config.lines = this.lines;
-                }
-
-                var emptyAnno = {className: "", text: []};
-                var html = [];
-                var fold = this.session.getNextFoldLine(i);
-                var foldStart = fold ? fold.start.row : Infinity;
-                var foldWidgets = this.$showFoldWidgets && this.session.foldWidgets;
-
-                for (var i = 0; i < config.lines.length; ++i) {
-                    if(i > foldStart) {
-                        i = fold.end.row + 1;
-                        fold = this.session.getNextFoldLine(i, fold);
-                        foldStart = fold ?fold.start.row :Infinity;
-                    }
-
-                    var annotation = this.$annotations[i] || emptyAnno;
-                    var lineNumber = config.lines[i];
-
-                    html.push("<div class='ace_gutter-cell",
-                        this.$decorations[i] || "",
-                        this.$breakpoints[i] ? " ace_breakpoint " : " ",
-                        annotation.className,
-                        "' title='", annotation.text.join("\n"),
-                        "' style='height:", config.lineHeight, "px;'>", lineNumber);
-
-                    if (foldWidgets) {
-                        var c = foldWidgets[i];
-                        // check if cached value is invalidated and we need to recompute
-                        if (c == null)
-                            c = foldWidgets[i] = this.session.getFoldWidget(i);
-                        if (c)
-                            html.push(
-                                "<span class='ace_fold-widget ", c,
-                                c == "start" && i == foldStart && i < fold.end.row ? " closed" : " open",
-                                "'></span>"
-                            );
-                    }
-
-                    var wrappedRowLength = this.session.getRowLength(i) - 1;
-                    while (wrappedRowLength--) {
-                        html.push("</div><div class='ace_gutter-cell' style='height:", config.lineHeight, "px'>\xA6");
-                    }
-
-                    html.push("</div>");
-                }
-                this.element = dom.setInnerHtml(this.element, html.join(""));
-                this.element.style.height = config.minHeight + "px";
-                
-                var gutterWidth = this.element.offsetWidth;
-                if (gutterWidth !== this.gutterWidth) {
-                    this.gutterWidth = gutterWidth;
-                    this._emit("changeGutterWidth", gutterWidth);
-                }
-            };
-            var self = this;
+            var lastLineIndex  = this.currentEditor.renderer.getLastVisibleRow();
+            
             var fun = function() {
-                self.currentEditor.renderer.$gutterLayer.update = update;
-                self.currentEditor.renderer.$gutterLayer.update({lines: lines});
+                
+                editor.renderer.$gutterLayer.update({lines: lines});
             };
             setTimeout(fun, 1000);
+        },
+
+        setGutterUpdateFunction : function(opened_file, editor) {
+            if (opened_file.indexOf("diff for ") !== 0) {
+                //reset update function of gutter layer to original funtion
+                var gutter = editor.renderer.$gutterLayer;
+                if (gutter.$originalUpdate) {
+                    gutter.update = gutter.$originalUpdate;
+                    gutter.$originalUpdate = undefined;
+                }
+            } else { //opened_file.indexOf("diff for ") === 0
+                //use own update function for gutter layer to set line numbers
+                var dom = require("ace/lib/dom");
+                var oop = require("ace/lib/oop");
+                var EventEmitter = require("ace/lib/event_emitter").EventEmitter;
+
+                var update = function(config) {
+                    if (config.lines) {
+                        this.lines = config.lines;
+                    } else {
+                        this.$config = config;
+                        config.lines = this.lines;
+                    }
+
+                    var emptyAnno = {className: "", text: []};
+                    var html = [];
+                    var fold = this.session.getNextFoldLine(i);
+                    var foldStart = fold ? fold.start.row : Infinity;
+                    var foldWidgets = this.$showFoldWidgets && this.session.foldWidgets;
+
+                    for (var i = 0; i < config.lines.length; ++i) {
+                        if(i > foldStart) {
+                            i = fold.end.row + 1;
+                            fold = this.session.getNextFoldLine(i, fold);
+                            foldStart = fold ?fold.start.row :Infinity;
+                        }
+
+                        var annotation = this.$annotations[i] || emptyAnno;
+                        var lineNumber = config.lines[i];
+
+                        html.push("<div class='ace_gutter-cell",
+                            this.$decorations[i] || "",
+                            this.$breakpoints[i] ? " ace_breakpoint " : " ",
+                            annotation.className,
+                            "' title='", annotation.text.join("\n"),
+                            "' style='height:", config.lineHeight, "px;'>", lineNumber);
+
+                        if (foldWidgets) {
+                            var c = foldWidgets[i];
+                            // check if cached value is invalidated and we need to recompute
+                            if (c == null)
+                                c = foldWidgets[i] = this.session.getFoldWidget(i);
+                            if (c)
+                                html.push(
+                                    "<span class='ace_fold-widget ", c,
+                                    c == "start" && i == foldStart && i < fold.end.row ? " closed" : " open",
+                                    "'></span>"
+                                );
+                        }
+
+                        var wrappedRowLength = this.session.getRowLength(i) - 1;
+                        while (wrappedRowLength--) {
+                            html.push("</div><div class='ace_gutter-cell' style='height:", config.lineHeight, "px'>\xA6");
+                        }
+
+                        html.push("</div>");
+                    }
+                    this.element = dom.setInnerHtml(this.element, html.join(""));
+                    this.element.style.height = config.minHeight + "px";
+                    
+                    var gutterWidth = this.element.offsetWidth;
+                    if (gutterWidth !== this.gutterWidth) {
+                        this.gutterWidth = gutterWidth;
+                        this._emit("changeGutterWidth", gutterWidth);
+                    }
+                };
+
+                editor.renderer.$gutterLayer.$originalUpdate = 
+                         editor.renderer.$gutterLayer.update;
+                editor.renderer.$gutterLayer.update = update;
+            }
         }
 
     };

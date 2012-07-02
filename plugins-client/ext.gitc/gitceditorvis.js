@@ -34,13 +34,12 @@ module.exports = (function() {
                 this.undecorate(closed_file, closed_editor);
             }
 
-            //show unstaged and staged changes
-            this.gitcCommands.send("git diff " + this.currentFile, this.addChanges.bind(this));
-            this.gitcCommands.send("git diff --cached " + this.currentFile, this.addChanges.bind(this));
+            //show unstaged and staged changes, use git diff without context
+            this.gitcCommands.send("git diff -U0 " + this.currentFile, this.addChanges.bind(this));
+            this.gitcCommands.send("git diff --cached -U0 " + this.currentFile, this.addChanges.bind(this));
             //maintain gutter tooltips
             this.currentEditor.renderer.scrollBar.addEventListener("scroll", this.onScroll.bind(this));
         },
-
         onScroll : function(e) {
             if (this.annotations[this.currentFile]) 
                 this.addMissingDecoration();

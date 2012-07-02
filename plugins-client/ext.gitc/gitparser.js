@@ -171,7 +171,7 @@ module.exports = (function() {
                          text: chunk_text,
                          lines: []}
 
-            var h = header.match(/@@ \-(\d+),(\d+)? \+(\d+),(\d+)? @@/);
+            var h = header.match(/@@ \-(\d+),?(\d+)? \+(\d+),?(\d+)? @@/);
             var position_old = parseInt(h[1]);
             var position_new = parseInt(h[3]);
 

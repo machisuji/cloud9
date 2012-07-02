@@ -40,6 +40,7 @@ module.exports = (function() {
             //maintain gutter tooltips
             this.currentEditor.renderer.scrollBar.addEventListener("scroll", this.onScroll.bind(this));
         },
+        
         onScroll : function(e) {
             if (this.annotations[this.currentFile]) 
                 this.addMissingDecoration();

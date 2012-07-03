@@ -47,12 +47,6 @@ module.exports = (function() {
         onScroll : function(e) {
             //if (this.annotations[this.currentFile]) 
             //    this.addMissingDecoration();
-
-			var layer = document.getElementsByClassName('ace_layer ace_marker-layer')[1];
-            for (var i = 0; i < layer.children.length; i++) {
-				var marker = layer.children[i];
-				marker.onmousemove = this.onMouseMove;
-			}
         },
 
         getFilePath : function(filePath) {
@@ -111,7 +105,7 @@ module.exports = (function() {
         createDeletedAnnotation : function(line, chunk, msg, status, filename) {
             var annotation = this.annotations[filename][status][line];
             if (!annotation) {
-                return this.createAnnotation(line, "deleted", chunk, msg, status);
+                return this.createAnnotation(line+1, "deleted", chunk, msg, status);
             } else if (annotation.type == "added") {
                 annotation.type = "changed";
 				return annotation;
@@ -230,7 +224,43 @@ module.exports = (function() {
         },
 
 		onMouseMove : function(e) {
-			console.log("mouse moved");
+			var line;
+			
+			if (this.annotations[this.currentFilename]) {
+				var stagedAnnotation = this.annotations[this.currentFilename].staged[line];
+				var unstagedAnnotation = this.annotations[this.currentFilename].unstaged[line];
+				
+				var tooltip = document.createElement('div');
+                tooltip.className = 'gitc-tooltip';
+
+				if (stagedAnnotation) {
+					var stagedDiv = document.createElement('div');
+					stagedDiv.className = "staged";
+					
+					var stagedParagraphs = stagedAnnotation.text.split("\n");
+					for (var i = 0; i < stagedParagraphs.length; i++) {
+						var stagedParagraph = document.create('p');
+						stagedParagraph.innerText = stagedParagraphs[i];
+						stagedDiv.appendChild(stagedParagraph);
+					}
+					stagedDiv.appendChild(this.createTooltipLinkBar(stagedAnnotation));
+					tooltip.appendChild(stagedDiv);
+				}
+				
+				if (unstagedAnnotation) {
+					var unstagedDiv = document.createElement('div');
+					unstagedDiv.className = "unstaged";
+					
+					var unstagedParagraphs = unstagedAnnotation.text.split("\n");
+					for (var i = 0; i < unstagedParagraphs.length; i++) {
+						var unstagedParagraph = document.create('p');
+						unstagedParagraph.innerText = unstagedParagraphs[i];
+						unstagedDiv.appendChild(unstagedParagraph);
+					}
+					unstagedDiv.appendChild(this.createTooltipLinkBar(unstagedAnnotation));
+					tooltip.appendChild(stagedDiv);
+				}
+			}
 		},
 
         annotateChunks : function(chunks, status, filename) {

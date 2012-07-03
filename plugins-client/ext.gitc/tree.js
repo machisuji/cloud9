@@ -168,14 +168,13 @@ module.exports = ext.register("ext/gitc/tree", {
                         editor.getSession().addMarker(range[1], "gitc-diff-" + range[0], "background");
                     }
                 });
-                var gutter = function() {
-                    require("ext/gitc/gitc").gitEditorVis.updateLineNumbers(doc.lines);
-                };
-                if (doc.lines) {
-                    setTimeout(gutter, 2000);
-                }
             };
             setTimeout(markRows, 25);
+        });
+
+        tabEditors.addEventListener("afterswitch", function(e) {
+            var doc = e.nextPage.$doc;
+            require("ext/gitc/gitc").gitEditorVis.updateLineNumbers(doc.lines);
         });
     },
 

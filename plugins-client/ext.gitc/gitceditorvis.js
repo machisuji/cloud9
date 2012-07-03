@@ -15,7 +15,6 @@ module.exports = (function() {
         this.currentFile = undefined;
         this.all_changes = {};
         this.annotations = {};
-        var _self = this;
     }
 
     GitEditorVis.prototype = {
@@ -320,10 +319,85 @@ module.exports = (function() {
             var firstLineIndex = this.currentEditor.renderer.getFirstVisibleRow();
             var lastLineIndex  = this.currentEditor.renderer.getLastVisibleRow();
             var self = this;
-            var fun = function(){             
-                self.currentEditor.renderer.$gutterLayer.update({lines: lines});
+            var fun = function() {
+                self.currentEditor.renderer.$gutterLayer.update({lines: lines, override: true});
             };
-            setTimeout(fun, 0);
+            if (lines) {
+                setTimeout(fun, 0);
+            }
+        },
+
+        customUpdate: function(config) {
+            if (config.lines && config.override === true) {
+                this.lines = config.lines;
+            } else if (this.lines) {
+                this.$config = config;
+                config.lines = this.lines;
+            } else if (config.lastRow) {
+                return this.$originalUpdate(config);
+            } else {
+                throw ("Invalid State: neither lines nor start or end rows given (config: " +
+                    config + ")")
+            }
+            var editor = this.currentEditor || (
+                this.currentEditor = require("ext/gitc/gitc").gitEditorVis.currentEditor);
+            var dom = require("ace/lib/dom");
+            var oop = require("ace/lib/oop");
+            var EventEmitter = require("ace/lib/event_emitter").EventEmitter;
+
+            var current_lines = config.lines.slice(editor.renderer.getFirstVisibleRow());
+
+            var emptyAnno = {className: "", text: []};
+            var html = [];
+            var fold = this.session.getNextFoldLine(i);
+            var foldStart = fold ? fold.start.row : Infinity;
+            var foldWidgets = this.$showFoldWidgets && this.session.foldWidgets;
+
+            for (var i = 0; i < current_lines.length; ++i) {
+                if(i > foldStart) {
+                    i = fold.end.row + 1;
+                    fold = this.session.getNextFoldLine(i, fold);
+                    foldStart = fold ?fold.start.row :Infinity;
+                }
+
+                var annotation = this.$annotations[i] || emptyAnno;
+                var lineNumber = current_lines[i];
+
+                html.push("<div class='ace_gutter-cell",
+                    this.$decorations[i] || "",
+                    this.$breakpoints[i] ? " ace_breakpoint " : " ",
+                    annotation.className,
+                    "' title='", annotation.text.join("\n"),
+                    "' style='height:", config.lineHeight, "px;'>", lineNumber);
+
+                if (foldWidgets) {
+                    var c = foldWidgets[i];
+                    // check if cached value is invalidated and we need to recompute
+                    if (c == null)
+                        c = foldWidgets[i] = this.session.getFoldWidget(i);
+                    if (c)
+                        html.push(
+                            "<span class='ace_fold-widget ", c,
+                            c == "start" && i == foldStart && i < fold.end.row ? " closed" : " open",
+                            "'></span>"
+                        );
+                }
+
+                var wrappedRowLength = this.session.getRowLength(i) - 1;
+                while (wrappedRowLength--) {
+                    html.push("</div><div class='ace_gutter-cell' style='height:", config.lineHeight, "px'>\xA6");
+                }
+
+                html.push("</div>");
+            }
+            this.element = dom.setInnerHtml(this.element, html.join(""));
+            this.element.style.height = config.minHeight + "px";
+            
+            var gutterWidth = this.element.offsetWidth;
+            if (gutterWidth !== this.gutterWidth) {
+                this.gutterWidth = gutterWidth;
+                this._emit("changeGutterWidth", gutterWidth);
+            }
         },
 
         setGutterUpdateFunction : function(opened_file, editor) {
@@ -332,84 +406,14 @@ module.exports = (function() {
                 var gutter = editor.renderer.$gutterLayer;
                 if (gutter.$originalUpdate) {
                     gutter.update = gutter.$originalUpdate;
-                    gutter.$originalUpdate = undefined;
                 }
             } else { //opened_file.indexOf("diff for ") === 0
                 //use own update function for gutter layer to set line numbers
-                var dom = require("ace/lib/dom");
-                var oop = require("ace/lib/oop");
-                var EventEmitter = require("ace/lib/event_emitter").EventEmitter;
-                var self = this;
-
-                var update = function(config) {
-                    if (config.lines) {
-                        this.lines = config.lines;
-                    } else {
-                        if(this.lines) {
-                            this.$config = config;
-                            config.lines = this.lines;
-                        } else {
-                            return this.$originalUpdate(config);
-                        }
-                    }
-                    var current_lines = config.lines.slice(self.currentEditor.renderer.getFirstVisibleRow());
-
-                    var emptyAnno = {className: "", text: []};
-                    var html = [];
-                    var fold = this.session.getNextFoldLine(i);
-                    var foldStart = fold ? fold.start.row : Infinity;
-                    var foldWidgets = this.$showFoldWidgets && this.session.foldWidgets;
-
-                    for (var i = 0; i < current_lines.length; ++i) {
-                        if(i > foldStart) {
-                            i = fold.end.row + 1;
-                            fold = this.session.getNextFoldLine(i, fold);
-                            foldStart = fold ?fold.start.row :Infinity;
-                        }
-
-                        var annotation = this.$annotations[i] || emptyAnno;
-                        var lineNumber = current_lines[i];
-
-                        html.push("<div class='ace_gutter-cell",
-                            this.$decorations[i] || "",
-                            this.$breakpoints[i] ? " ace_breakpoint " : " ",
-                            annotation.className,
-                            "' title='", annotation.text.join("\n"),
-                            "' style='height:", config.lineHeight, "px;'>", lineNumber);
-
-                        if (foldWidgets) {
-                            var c = foldWidgets[i];
-                            // check if cached value is invalidated and we need to recompute
-                            if (c == null)
-                                c = foldWidgets[i] = this.session.getFoldWidget(i);
-                            if (c)
-                                html.push(
-                                    "<span class='ace_fold-widget ", c,
-                                    c == "start" && i == foldStart && i < fold.end.row ? " closed" : " open",
-                                    "'></span>"
-                                );
-                        }
-
-                        var wrappedRowLength = this.session.getRowLength(i) - 1;
-                        while (wrappedRowLength--) {
-                            html.push("</div><div class='ace_gutter-cell' style='height:", config.lineHeight, "px'>\xA6");
-                        }
-
-                        html.push("</div>");
-                    }
-                    this.element = dom.setInnerHtml(this.element, html.join(""));
-                    this.element.style.height = config.minHeight + "px";
-                    
-                    var gutterWidth = this.element.offsetWidth;
-                    if (gutterWidth !== this.gutterWidth) {
-                        this.gutterWidth = gutterWidth;
-                        this._emit("changeGutterWidth", gutterWidth);
-                    }
-                };
-
-                editor.renderer.$gutterLayer.$originalUpdate = 
-                         editor.renderer.$gutterLayer.update;
-                editor.renderer.$gutterLayer.update = update;
+                var gutter = editor.renderer.$gutterLayer;
+                if (gutter.$originalUpdate === undefined) { 
+                    gutter.$originalUpdate = gutter.update;
+                }
+                gutter.update = this.customUpdate;
             }
         }
 

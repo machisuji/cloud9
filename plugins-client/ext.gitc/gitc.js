@@ -29,7 +29,7 @@ module.exports = ext.register("ext/gitc/gitc", {
     init : function(amlNode){
         apf.importCssString((this.css || ""));
         this.gitcCommands = new GitcCommands();
-        this.gitEditorVis = new GitEditorVis(this.gitcCommands, gitcTree);
+        this.gitEditorVis = new GitEditorVis(this.gitcCommands);
     },
 
     hook : function(){

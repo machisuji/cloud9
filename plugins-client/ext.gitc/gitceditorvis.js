@@ -9,9 +9,8 @@ var Range = require("ace/range").Range;
 
 module.exports = (function() {
     
-    function GitEditorVis(gitccommands, gitctree) {
+    function GitEditorVis(gitccommands) {
         this.gitcCommands = gitccommands;
-        this.gitcTree = gitctree;
         this.currentEditor = undefined;
         this.currentFile = undefined;
         this.all_changes = {};
@@ -42,8 +41,6 @@ module.exports = (function() {
                 this.gitcCommands.send("git diff --cached -U0 " + this.currentFile, this.addChanges.bind(this));
                 //maintain gutter tooltips
                 this.currentEditor.renderer.scrollBar.addEventListener("scroll", this.onScroll.bind(this));
-            } else {
-                //this.gitcTree.markRows(this.currentEditor, e.nextPage.$doc);
             }
         },
         

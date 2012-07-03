@@ -42,8 +42,14 @@ module.exports = (function() {
         },
         
         onScroll : function(e) {
-            if (this.annotations[this.currentFile]) 
-                this.addMissingDecoration();
+            //if (this.annotations[this.currentFile]) 
+            //    this.addMissingDecoration();
+
+			var layer = document.getElementsByClassName('ace_layer ace_marker-layer')[1];
+            for (var i = 0; i < layer.children.length; i++) {
+				var marker = layer.children[i];
+				marker.onmousemove = this.onMouseMove;
+			}
         },
 
         getFilePath : function(filePath) {
@@ -76,9 +82,13 @@ module.exports = (function() {
 
         markGutterLine : function(annotation) {
 			if (annotation.type == "added") {
-                this.currentEditor.renderer.addGutterDecoration(annotation.row, "gitc-added");
+                //this.currentEditor.renderer.addGutterDecoration(annotation.row, "gitc-added");
+				this.currentEditor.getSession().addMarker(new Range(annotation.row, 0, annotation.row, 1), "gitc-added", "background", true);
             } else if (annotation.type == "changed") {
-                this.currentEditor.renderer.addGutterDecoration(annotation.row, "gitc-changed");
+                //this.currentEditor.renderer.addGutterDecoration(annotation.row, "gitc-changed");
+				this.currentEditor.getSession().addMarker(new Range(annotation.row, 0, annotation.row, 1), "gitc-changed", "background", true);
+            } else if (annotation.type == "deleted") {
+    			this.currentEditor.getSession().addMarker(new Range(annotation.row, 0, annotation.row, 1), "gitc-removed", "background", true);
             };
         },
         
@@ -93,6 +103,21 @@ module.exports = (function() {
           };
           
           return annotation;
+        },
+        
+        createDeletedAnnotation : function(line, chunk, msg, status, filename) {
+            var annotation = this.annotations[filename][status][line];
+            if (!annotation) {
+                return this.createAnnotation(line, "deleted", chunk, msg, status);
+            } else if (annotation.type == "added") {
+                annotation.type = "changed";
+				return annotation;
+            } else if (annotation.type == "changed") {
+                return this.createDeletedAnnotation(line+1, chunk, msg, status, filename)
+            } else if (annotation.type == "deleted") {
+                annotation.text += ("\n" + msg);
+				return annotation;
+            }
         },
         
         createTooltips : function() {
@@ -189,32 +214,58 @@ module.exports = (function() {
             
             if (this.all_changes[this.currentFile].unstaged && this.all_changes[this.currentFile].staged) {
                 //add gutter decoration for all annotations
-                var annotations = this.annotations[this.currentFile];
-                for (var i in annotations) {
-                    this.markGutterLine(annotations[i]);
+                var stagedAnnotations = this.annotations[this.currentFile].staged;
+                for (var i in stagedAnnotations) {
+                    this.markGutterLine(stagedAnnotations[i]);
+                }
+
+				var unstagedAnnotations = this.annotations[this.currentFile].unstaged;
+                for (var i in unstagedAnnotations) {
+                    this.markGutterLine(unstagedAnnotations[i]);
                 }
             }
         },
+
+		onMouseMove : function(e) {
+			console.log("mouse moved");
+		},
 
         annotateChunks : function(chunks, status, filename) {
             if (!this.annotations[filename]) {
-                this.annotations[filename] = {};
+				this.annotations[filename] = {};
+            }
+            
+            if (!this.annotations[filename][status]) {
+                this.annotations[filename][status] = {};
                 
-                var annotations = this.annotations[filename];
+                var deletedLines = [];
+
+				//create 'added' annotations
                 for (var i = 0; i < chunks.length; i++) {
-        			var chunk = chunks[i];
+            		var chunk = chunks[i];
     				for (var j = 0; j < chunk.lines.length; j++) {
     					var line = chunk.lines[j];
-    					var annotation = this.createAnnotation(line.number_new-1, line.status, chunk, line.content, status);
-                        if (this.isChangeAnnotation(annotation, filename)) {
-                            annotation.type = "changed";
-                        }
-                        annotations[annotation.row.toString()] = annotation;
+                        if (line.status == "added") {
+                            var annotation = this.createAnnotation(line.number_new-1, line.status, chunk, line.content, status);
+                            this.annotations[filename][status][annotation.row.toString()] = annotation;
+                        } else if (line.status == "deleted"){
+							var k = -1;
+							while (++k < deletedLines.length && deletedLines[k].number_old < line.number_old);
+							deletedLines.splice(k, 0, line);
+						}
                     }
                 }
+				
+				for (var i = 0; i < deletedLines.length; i++) {
+					var line = deletedLines[i];
+                    if (line.status == "deleted") {
+                        var annotation = this.createDeletedAnnotation(line.number_new-1, chunk, line.content, status, filename);
+                        this.annotations[filename][status][annotation.row.toString()] = annotation;
+                    }
+				}
             }
         },
-
+        
         isChangeAnnotation : function(annotation, filename) {
             var key = annotation.row.toString();
             var other = this.annotations[filename][key];
@@ -227,31 +278,40 @@ module.exports = (function() {
             var gutterCells = document.getElementsByClassName('ace_gutter-cell');
             var firstLineIndex = this.currentEditor.renderer.getFirstVisibleRow();
             for (var i = 0; i < gutterCells.length; i++) {
-                var annotation = this.annotations[this.currentFile][(firstLineIndex+i).toString()];
-                if (!annotation)
-                    continue;
-                    
-                var cell = gutterCells[i];
+				if (this.annotations[this.currentFile].staged) {
+					var stagedAnnotation = this.annotations[this.currentFile].staged[(firstLineIndex+i).toString()];
+					this.addMissingDeletedDecoration(stagedAnnotation, gutterCells[i]);
+				}
                 
-                //add deleted line marker, if not at start of visible gutter area (otherwise, marker would not be visible anyway)
-                if (annotation.type == "deleted" && i > 0) {
-                    var marker = document.createElement('div');
-                    marker.classList.add("ace_gutter-cell");
-                    marker.classList.add("gitc-removed");
-                    marker.setAttribute("style", "height: 2px");
-                    
-                    cell.setAttribute("style", "height: 15px");
-                    cell.previousSibling.setAttribute("style", "height: 15px");
-                    cell.parentNode.insertBefore(marker, cell);
-                    cell = marker;
-                }
-                
-                //add tooltip
-                if (annotation.tooltip) {
-                    cell.appendChild(annotation.tooltip);
-                }
+				if (this.annotations[this.currentFile].unstaged) {
+					var unstagedAnnotation = this.annotations[this.currentFile].unstaged[(firstLineIndex+i).toString()];
+					this.addMissingDeletedDecoration(unstagedAnnotation, gutterCells[i]);
+				}
             }
         },
+
+		addMissingDeletedDecoration : function(annotation, cell) {
+			if (!annotation)
+				return;
+			
+			//add deleted line marker, if not at start of visible gutter area (otherwise, marker would not be visible anyway)
+            if (annotation.type == "deleted" && cell.previousSibling != undefined) {
+                var marker = document.createElement('div');
+                marker.classList.add("ace_gutter-cell");
+                marker.classList.add("gitc-removed");
+                marker.setAttribute("style", "height: 2px");
+
+                cell.setAttribute("style", "height: 15px");
+                cell.previousSibling.setAttribute("style", "height: 15px");
+                cell.parentNode.insertBefore(marker, cell);
+                cell = marker;
+            }
+
+            //add tooltip
+            if (annotation.tooltip) {
+                cell.appendChild(annotation.tooltip);
+            }
+		},
         
         updateLineNumbers : function(lines) {
             var firstLineIndex = this.currentEditor.renderer.getFirstVisibleRow();

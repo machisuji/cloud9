@@ -68,6 +68,10 @@
 	padding: 0;
 }
 
+.gitc-tooltip p.gitc-commit-revert {
+    padding-top: 3px;
+}
+
 .gitc-tooltip p a {
 	background: #bbb;
 	border: 1px solid #888;

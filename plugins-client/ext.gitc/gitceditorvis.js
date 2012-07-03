@@ -75,19 +75,18 @@ module.exports = (function() {
         },
 
         markGutterLine : function(annotation) {
-            var session = this.currentEditor.getSession();
-            
-            if (annotation.type == "added") {
+			if (annotation.type == "added") {
                 this.currentEditor.renderer.addGutterDecoration(annotation.row, "gitc-added");
             } else if (annotation.type == "changed") {
                 this.currentEditor.renderer.addGutterDecoration(annotation.row, "gitc-changed");
             };
         },
         
-        createAnnotation : function(line, type, msg, status) {
+        createAnnotation : function(line, type, chunk, msg, status) {
           var annotation = {
             row: line,
             type: type,
+            chunk: chunk,
             text: msg,
             status: status,
             tooltip: undefined
@@ -103,36 +102,65 @@ module.exports = (function() {
 
             var file_annotations = this.annotations[this.currentFile]
             var lines = this.currentEditor.getSession().getLength();
+            var lastAnnotation = null;
             for (var i = 1; i <= lines; i++) {
                 var annotation = file_annotations[i.toString()];
                 if (annotation) {
-                    //create tooltip for this annotation
-                    var p = document.createElement('p');
-                    p.innerText = annotation.text;
+                    if (!lastAnnotation) {
+                        lastAnnotation = annotation;
                     
-                    annotation.tooltip = document.createElement('div');
-                    annotation.tooltip.className = 'gitc-tooltip';
-                    annotation.tooltip.appendChild(p);
+                        //create tooltip for this annotation
+                        var p = document.createElement('p');
+                        p.innerText = annotation.text;
+                        
+                        annotation.tooltip = document.createElement('div');
+                        annotation.tooltip.className = 'gitc-tooltip';
+                        annotation.tooltip.appendChild(p);
+                        annotation.tooltip.appendChild(this.createTooltipLinkBar(annotation));
+                    } else {
+                        if (annotation.type == lastAnnotation.type && annotation.status == lastAnnotation.status) {
+                            annotation.tooltip = lastAnnotation.tooltip;
+                            var p = document.createElement('p');
+                            p.innerText = annotation.text;
+                            lastAnnotation.tooltip.insertBefore(p, lastAnnotation.tooltip.lastChild);
+                        } else {
+                            var p = document.createElement('p');
+                            p.innerText = annotation.text;
+                            
+                            annotation.tooltip = document.createElement('div');
+                            annotation.tooltip.className = 'gitc-tooltip';
+                            annotation.tooltip.appendChild(p);
+                            annotation.tooltip.appendChild(this.createTooltipLinkBar(annotation));
+                            
+                            lastAnnotation = null;
+                        }
+                    }
                     
-                    var commitLink = document.createElement('a');
-                    commitLink.innerText = "Commit";
-                    commitLink.setAttribute("onclick", function(e) {
-                        console.log('Commit all changes belonging to this chunk.');
-                    });
-                    
-                    var revertLink = document.createElement('a'); //button to revert
-                    revertLink.innerText = "Revert";
-                    revertLink.setAttribute("onclick", function(e) {
-                        console.log('Revert all changes belonging to this chunk.');
-                    });
-                    
-                    var commitRevertP = document.createElement('p'); //button to commit
-                    commitRevertP.className = "gitc-commit-revert";
-                    commitRevertP.appendChild(commitLink);
-                    commitRevertP.appendChild(revertLink);
-                    annotation.tooltip.appendChild(commitRevertP);
+                } else {
+                    lastAnnotation = null;
                 }
             }
+        },
+        
+        createTooltipLinkBar : function(annotation) {
+            var commitLink = document.createElement('a');
+            commitLink.innerText = annotation.status == "staged" ? "Commit" : "Stage";
+            commitLink.setAttribute("onclick", function(e) {
+                console.log('Commit all changes belonging to this chunk.');
+            });
+            
+            var revertLink = document.createElement('a');
+            revertLink.innerText = annotation.status == "staged" ? "Revert" : "Unstage";
+            revertLink.setAttribute("onclick", function(e) {
+                console.log('Revert all changes belonging to this chunk.');
+            });
+            
+            var commitRevertP = document.createElement('p');
+            commitRevertP.className = "gitc-commit-revert";
+            commitRevertP.appendChild(commitLink);
+            commitRevertP.appendChild(revertLink);
+            
+            return commitRevertP;
         },
         
         undecorate : function(closedFile, editor) {
@@ -174,10 +202,10 @@ module.exports = (function() {
                 
                 var annotations = this.annotations[filename];
                 for (var i = 0; i < chunks.length; i++) {
-                    var chunk = chunks[i];
-                    for (var j = 0; j < chunk.lines.length; j++) {
-                        var line = chunk.lines[j];
-                        var annotation = this.createAnnotation(line.number_new-1, line.status, line.content, status);
+        			var chunk = chunks[i];
+    				for (var j = 0; j < chunk.lines.length; j++) {
+    					var line = chunk.lines[j];
+    					var annotation = this.createAnnotation(line.number_new-1, line.status, chunk, line.content, status);
                         if (this.isChangeAnnotation(annotation, filename)) {
                             annotation.type = "changed";
                         }

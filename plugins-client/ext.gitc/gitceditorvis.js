@@ -9,12 +9,14 @@ var Range = require("ace/range").Range;
 
 module.exports = (function() {
     
-    function GitEditorVis(gitccommands) {
+    function GitEditorVis(gitccommands, gitctree) {
         this.gitcCommands = gitccommands;
+        this.gitcTree = gitctree;
         this.currentEditor = undefined;
         this.currentFile = undefined;
         this.all_changes = {};
         this.annotations = {};
+        var _self = this;
     }
 
     GitEditorVis.prototype = {
@@ -34,11 +36,15 @@ module.exports = (function() {
                 this.undecorate(closed_file, closed_editor);
             }
 
-            //show unstaged and staged changes, use git diff without context
-            this.gitcCommands.send("git diff -U0 " + this.currentFile, this.addChanges.bind(this));
-            this.gitcCommands.send("git diff --cached -U0 " + this.currentFile, this.addChanges.bind(this));
-            //maintain gutter tooltips
-            this.currentEditor.renderer.scrollBar.addEventListener("scroll", this.onScroll.bind(this));
+            if (e.nextPage.$doc.type !== "diff") {
+                //show unstaged and staged changes, use git diff without context
+                this.gitcCommands.send("git diff -U0 " + this.currentFile, this.addChanges.bind(this));
+                this.gitcCommands.send("git diff --cached -U0 " + this.currentFile, this.addChanges.bind(this));
+                //maintain gutter tooltips
+                this.currentEditor.renderer.scrollBar.addEventListener("scroll", this.onScroll.bind(this));
+            } else {
+                //this.gitcTree.markRows(this.currentEditor, e.nextPage.$doc);
+            }
         },
         
         onScroll : function(e) {
@@ -228,12 +234,11 @@ module.exports = (function() {
         updateLineNumbers : function(lines) {
             var firstLineIndex = this.currentEditor.renderer.getFirstVisibleRow();
             var lastLineIndex  = this.currentEditor.renderer.getLastVisibleRow();
-            
-            var fun = function() {
-                
-                editor.renderer.$gutterLayer.update({lines: lines});
+            var self = this;
+            var fun = function(){             
+                self.currentEditor.renderer.$gutterLayer.update({lines: lines});
             };
-            setTimeout(fun, 1000);
+            setTimeout(fun, 0);
         },
 
         setGutterUpdateFunction : function(opened_file, editor) {
@@ -249,14 +254,20 @@ module.exports = (function() {
                 var dom = require("ace/lib/dom");
                 var oop = require("ace/lib/oop");
                 var EventEmitter = require("ace/lib/event_emitter").EventEmitter;
+                var self = this;
 
                 var update = function(config) {
                     if (config.lines) {
                         this.lines = config.lines;
                     } else {
-                        this.$config = config;
-                        config.lines = this.lines;
+                        if(this.lines) {
+                            this.$config = config;
+                            config.lines = this.lines;
+                        } else {
+                            return this.$originalUpdate(config);
+                        }
                     }
+                    var current_lines = config.lines.slice(self.currentEditor.renderer.getFirstVisibleRow());
 
                     var emptyAnno = {className: "", text: []};
                     var html = [];
@@ -264,7 +275,7 @@ module.exports = (function() {
                     var foldStart = fold ? fold.start.row : Infinity;
                     var foldWidgets = this.$showFoldWidgets && this.session.foldWidgets;
 
-                    for (var i = 0; i < config.lines.length; ++i) {
+                    for (var i = 0; i < current_lines.length; ++i) {
                         if(i > foldStart) {
                             i = fold.end.row + 1;
                             fold = this.session.getNextFoldLine(i, fold);
@@ -272,7 +283,7 @@ module.exports = (function() {
                         }
 
                         var annotation = this.$annotations[i] || emptyAnno;
-                        var lineNumber = config.lines[i];
+                        var lineNumber = current_lines[i];
 
                         html.push("<div class='ace_gutter-cell",
                             this.$decorations[i] || "",

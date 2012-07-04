@@ -75,12 +75,12 @@ module.exports = (function() {
         markGutterLine : function(annotation) {
 			if (annotation.type == "added") {
                 //this.currentEditor.renderer.addGutterDecoration(annotation.row, "gitc-added");
-				this.currentEditor.getSession().addMarker(new Range(annotation.row, 0, annotation.row, 1), "gitc-added", "background", true);
+				this.currentEditor.getSession().addMarker(new Range(annotation.row, 0, annotation.row, 1), "gitc-added-" + annotation.status, "background", true);
             } else if (annotation.type == "changed") {
                 //this.currentEditor.renderer.addGutterDecoration(annotation.row, "gitc-changed");
-				this.currentEditor.getSession().addMarker(new Range(annotation.row, 0, annotation.row, 1), "gitc-changed", "background", true);
+				this.currentEditor.getSession().addMarker(new Range(annotation.row, 0, annotation.row, 1), "gitc-changed-" + annotation.status, "background", true);
             } else if (annotation.type == "deleted") {
-    			this.currentEditor.getSession().addMarker(new Range(annotation.row, 0, annotation.row, 1), "gitc-removed", "background", true);
+    			this.currentEditor.getSession().addMarker(new Range(annotation.row, 0, annotation.row, 1), "gitc-removed-" + annotation.status, "background", true);
             };
         },
         
@@ -167,7 +167,7 @@ module.exports = (function() {
             });
             
             var revertLink = document.createElement('a');
-            revertLink.innerText = annotation.status == "staged" ? "Revert" : "Unstage";
+            revertLink.innerText = annotation.status == "staged" ? "Unstage" : "Discard";
             revertLink.setAttribute("onclick", function(e) {
                 console.log('Revert all changes belonging to this chunk.');
             });
@@ -236,9 +236,25 @@ module.exports = (function() {
 					var stagedAnnotation = this.annotations[this.currentFile].staged[row.toString()];
 					if (stagedAnnotation) {
 						var stagedDiv = document.createElement('div');
-						stagedDiv.className = "staged";
-
-						var stagedParagraphs = stagedAnnotation.text.split("\n");
+						stagedDiv.className = "staged-" + stagedAnnotation.type;
+                        //Blub
+						
+						var stagedText = stagedAnnotation.text;
+						var prevRow = row-1;
+						var prevAnnotation = this.annotations[this.currentFile].staged[prevRow.toString()];
+						while (prevAnnotation && prevAnnotation.type == stagedAnnotation.type) {
+							stagedText = prevAnnotation.text + "\n" + stagedText;
+							prevAnnotation = this.annotations[this.currentFile].staged[(--prevRow).toString()];
+						}
+						
+						var nextRow = row+1;
+						var nextAnnotation = this.annotations[this.currentFile].staged[nextRow.toString()];
+						while (nextAnnotation && nextAnnotation.type == stagedAnnotation.type) {
+							stagedText = stagedText + "\n" + nextAnnotation.text;
+							nextAnnotation = this.annotations[this.currentFile].staged[(++nextRow).toString()];
+						}
+						
+						var stagedParagraphs = stagedText.split("\n");
 						for (var i = 0; i < stagedParagraphs.length; i++) {
 							var stagedParagraph = document.createElement('p');
 							stagedParagraph.innerText = stagedParagraphs[i];
@@ -253,9 +269,24 @@ module.exports = (function() {
 					var unstagedAnnotation = this.annotations[this.currentFile].unstaged[row.toString()];
 					if (unstagedAnnotation) {
 						var unstagedDiv = document.createElement('div');
-						unstagedDiv.className = "unstaged";
+						unstagedDiv.className = "unstaged-" + unstagedAnnotation.type;
+						
+						var unstagedText = unstagedAnnotation.text;
+						var prevRow = row-1;
+						var prevAnnotation = this.annotations[this.currentFile].unstaged[prevRow.toString()];
+						while (prevAnnotation && prevAnnotation.type == unstagedAnnotation.type) {
+							unstagedText = prevAnnotation.text + "\n" + unstagedText;
+							prevAnnotation = this.annotations[this.currentFile].unstaged[(--prevRow).toString()];
+						}
+						
+						var nextRow = row+1;
+						var nextAnnotation = this.annotations[this.currentFile].unstaged[nextRow.toString()];
+						while (nextAnnotation && nextAnnotation.type == unstagedAnnotation.type) {
+							unstagedText = unstagedText + "\n" + nextAnnotation.text;
+							nextAnnotation = this.annotations[this.currentFile].unstaged[(++nextRow).toString()];
+						}
 
-						var unstagedParagraphs = unstagedAnnotation.text.split("\n");
+						var unstagedParagraphs = unstagedText.split("\n");
 						for (var i = 0; i < unstagedParagraphs.length; i++) {
 							var unstagedParagraph = document.createElement('p');
 							unstagedParagraph.innerText = unstagedParagraphs[i];
@@ -270,7 +301,7 @@ module.exports = (function() {
 				}
 			}
 		},
-
+        
         annotateChunks : function(chunks, status, filename) {
             if (!this.annotations[filename]) {
 				this.annotations[filename] = {};

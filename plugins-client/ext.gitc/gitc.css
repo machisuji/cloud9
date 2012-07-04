@@ -31,11 +31,18 @@
 	color: rgba(0, 180, 0, 0.8);
 }
 
-.ace_marker-layer .gitc-added {
-  background: #afa;
+.ace_marker-layer .gitc-added-unstaged {
+  background: #5f5;
   left: 0 !important;
   position: absolute;
-  width: 5px !important;
+  width: 3px !important;
+}
+
+.ace_marker-layer .gitc-added-staged {
+  background: #CAFFCA;
+  left: 0 !important;
+  position: absolute;
+  width: 6px !important;
 }
 
 .ace_gutter-cell.gitc-changed {
@@ -43,27 +50,42 @@
 	color: rgba(0, 0, 255, 0.8);
 }
 
-.ace_marker-layer .gitc-changed {
-  background: #aaf;
+.ace_marker-layer .gitc-changed-unstaged {
+  background: #55f;
   left: 0 !important;
   position: absolute;
-  width: 5px !important;
+  width: 3px !important;
 }
 
-.ace_marker-layer .gitc-removed {
-  background: #faa;
+.ace_marker-layer .gitc-changed-staged {
+  background: #CACAFF;
   left: 0 !important;
   position: absolute;
-  width: 5px !important;
+  width: 6px !important;
+}
+
+.ace_marker-layer .gitc-removed-unstaged {
+  background: #f55;
+  left: 0 !important;
+  position: absolute;
+  width: 3px !important;
+  margin-top: -8px;
+}
+
+.ace_marker-layer .gitc-removed-staged {
+  background: #FFCACA;
+  left: 0 !important;
+  position: absolute;
+  width: 6px !important;
   margin-top: -8px;
 }
 
 .gitc-tooltip {
-	background: #FFF500;
+	background: #FBFDBD;
 	border: 1px solid #888;
 	font-family: "Sans-Serif";
 	font-size: 10px;
-    padding: 2px;
+    padding: 1px;
     position: absolute;
 	text-align: left;
 }
@@ -88,19 +110,25 @@
     display: block;
 }
 
-.gitc-added .gitc-tooltip {
+.staged-added, .unstaged-added {
     background: #cfc;
     color: rgba(0, 180, 0, 0.8);
+	padding: 2px 2px 4px 2px;
+	margin: 2px;
 }
 
-.gitc-changed .gitc-tooltip {
+.staged-changed, .unstaged-changed {
 	background: #ccf;
     color: #00f;
+	padding: 2px 2px 4px 2px;
+	margin: 2px;
 }
 
-.gitc-removed .gitc-tooltip {
+.staged-deleted, .unstaged-deleted {
 	background: #fcc;
     color: #f00;
+	padding: 2px 2px 4px 2px;
+	margin: 2px;
 }
 
 .ace_gutter {

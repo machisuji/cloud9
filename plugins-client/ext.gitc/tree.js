@@ -283,9 +283,44 @@ module.exports = ext.register("ext/gitc/tree", {
                         return result;
                     }), true /* flatten only one level */);
 
+                    //force that gutter number has at least 4-piece
+                    //this will display shifted gutter for >4-piece :(
+                    var getGutterNumber = function(nr) {
+                        if(!nr ) {
+                            return "<span style='color:#E8E8E8'>----</span>";
+                        }
+                        if (nr.toString().length < 4) {
+                            var offset = 4 - nr.toString().length;
+                            var offsetString = "<span style='color:#E8E8E8'>";
+                            for(var i = 0; i < offset; i++) {
+                                offsetString += "-";
+                            }
+                            offsetString += "</span>";
+                            nr = offsetString + nr;
+                        }
+                        return nr;
+                    };
+
+                    var getGutterLines = function(left, right) {
+                        left = getGutterNumber(left);
+                        right = getGutterNumber(right);
+                        return "<div style='width:100%'>" +
+                               "<div style='width:50%;text-align:center;position:relative;display:inline;'>" +
+                                        left + "</div>" +
+                               "<div style='width:50%;text-align:center;position:relative;display:inline;border-left:1px solid black'>" +
+                                        right + "</div>" +
+                               "</div>"
+                    };
+
                     var lines = _.flatten(_.map(chunks, function(chunk) {
-                        return ["---"].concat(_.map(chunk.lines, function(line) {
-                            return line.number_new;
+                        return ["<div style='text-align:center'>---</div>"].concat(_.map(chunk.lines, function(line) {
+                            if (line.status === "deleted") {
+                                return getGutterLines(line.number_old, "");
+                            } else if (line.status === "added") {
+                                return getGutterLines("", line.number_new);
+                            } else {
+                                return getGutterLines(line.number_old, line.number_new);
+                            }
                         }));
                     }), true /* flatten only one level */);
 

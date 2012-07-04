@@ -59,14 +59,11 @@
 }
 
 .gitc-tooltip {
-	background: #ff0;
+	background: #FFF500;
 	border: 1px solid #888;
-    display: none;
 	font-family: "Sans-Serif";
 	font-size: 10px;
-	left: 37px;
-	margin-top: -8px;
-    padding: 4px;
+    padding: 2px;
     position: absolute;
 	text-align: left;
 }

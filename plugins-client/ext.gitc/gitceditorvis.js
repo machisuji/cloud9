@@ -39,15 +39,11 @@ module.exports = (function() {
                 this.gitcCommands.send("git diff -U0 " + this.currentFile, this.addChanges.bind(this));
                 this.gitcCommands.send("git diff --cached -U0 " + this.currentFile, this.addChanges.bind(this));
                 //maintain gutter tooltips
-                this.currentEditor.renderer.scrollBar.addEventListener("scroll", this.onScroll.bind(this));
+                //this.currentEditor.renderer.scrollBar.addEventListener("scroll", this.onScroll.bind(this));
+                this.currentEditor.on("mousemove", this.onMouseMove.bind(this));
             }
         },
         
-        onScroll : function(e) {
-            //if (this.annotations[this.currentFile]) 
-            //    this.addMissingDecoration();
-        },
-
         getFilePath : function(filePath) {
             if (typeof filePath === "undefined")
                 filePath = tabEditors.getPage().$model.data.getAttribute("path");
@@ -223,41 +219,54 @@ module.exports = (function() {
         },
 
 		onMouseMove : function(e) {
-			var line;
+			var layer = document.getElementsByClassName("ace_layer ace_marker-layer")[1];
+			var existingTooltips = layer.getElementsByClassName('gitc-tooltip');
+			for (var i = 0; i < existingTooltips.length; i++) {
+				layer.removeChild(existingTooltips[i]);
+			}
+			var row = e.getDocumentPosition().row;
+			var column = e.getDocumentPosition().column;
 			
-			if (this.annotations[this.currentFilename]) {
-				var stagedAnnotation = this.annotations[this.currentFilename].staged[line];
-				var unstagedAnnotation = this.annotations[this.currentFilename].unstaged[line];
-				
+			if (column == 0 && this.annotations[this.currentFile]) {
 				var tooltip = document.createElement('div');
-                tooltip.className = 'gitc-tooltip';
+                tooltip.className = "gitc-tooltip";
+				tooltip.setAttribute("style", "left: " + (e.domEvent.layerX + 10).toString() + "px; top: " + e.domEvent.layerY.toString() + "px;");
 
-				if (stagedAnnotation) {
-					var stagedDiv = document.createElement('div');
-					stagedDiv.className = "staged";
-					
-					var stagedParagraphs = stagedAnnotation.text.split("\n");
-					for (var i = 0; i < stagedParagraphs.length; i++) {
-						var stagedParagraph = document.create('p');
-						stagedParagraph.innerText = stagedParagraphs[i];
-						stagedDiv.appendChild(stagedParagraph);
+				if (this.annotations[this.currentFile].staged) {
+					var stagedAnnotation = this.annotations[this.currentFile].staged[row.toString()];
+					if (stagedAnnotation) {
+						var stagedDiv = document.createElement('div');
+						stagedDiv.className = "staged";
+
+						var stagedParagraphs = stagedAnnotation.text.split("\n");
+						for (var i = 0; i < stagedParagraphs.length; i++) {
+							var stagedParagraph = document.createElement('p');
+							stagedParagraph.innerText = stagedParagraphs[i];
+							stagedDiv.appendChild(stagedParagraph);
+						}
+						stagedDiv.appendChild(this.createTooltipLinkBar(stagedAnnotation));
+						tooltip.appendChild(stagedDiv);
 					}
-					stagedDiv.appendChild(this.createTooltipLinkBar(stagedAnnotation));
-					tooltip.appendChild(stagedDiv);
 				}
 				
-				if (unstagedAnnotation) {
-					var unstagedDiv = document.createElement('div');
-					unstagedDiv.className = "unstaged";
-					
-					var unstagedParagraphs = unstagedAnnotation.text.split("\n");
-					for (var i = 0; i < unstagedParagraphs.length; i++) {
-						var unstagedParagraph = document.create('p');
-						unstagedParagraph.innerText = unstagedParagraphs[i];
-						unstagedDiv.appendChild(unstagedParagraph);
+				if (this.annotations[this.currentFile].unstaged) {
+					var unstagedAnnotation = this.annotations[this.currentFile].unstaged[row.toString()];
+					if (unstagedAnnotation) {
+						var unstagedDiv = document.createElement('div');
+						unstagedDiv.className = "unstaged";
+
+						var unstagedParagraphs = unstagedAnnotation.text.split("\n");
+						for (var i = 0; i < unstagedParagraphs.length; i++) {
+							var unstagedParagraph = document.createElement('p');
+							unstagedParagraph.innerText = unstagedParagraphs[i];
+							unstagedDiv.appendChild(unstagedParagraph);
+						}
+						unstagedDiv.appendChild(this.createTooltipLinkBar(unstagedAnnotation));
+						tooltip.appendChild(unstagedDiv);
 					}
-					unstagedDiv.appendChild(this.createTooltipLinkBar(unstagedAnnotation));
-					tooltip.appendChild(stagedDiv);
+				}
+				if (tooltip.children.length > 0) {
+					layer.appendChild(tooltip);
 				}
 			}
 		},

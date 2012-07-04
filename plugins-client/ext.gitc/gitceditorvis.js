@@ -19,6 +19,16 @@ module.exports = (function() {
 
     GitEditorVis.prototype = {
 
+        onOpenFile : function(e){
+            if(!e.editor) return;
+            //initally set read only, beforeswitch event would be triggered too late
+            if (e.doc.type !== "diff") {
+                e.editor.amlEditor.$editor.setReadOnly(false);
+            } else {
+                e.editor.amlEditor.$editor.setReadOnly(true);
+            }
+        },
+
         onTabSwitch : function(e){
             if (e.nextPage.$editor.path !== "ext/code/code") {
                 //only code editors are of our concern
@@ -35,12 +45,15 @@ module.exports = (function() {
             }
 
             if (e.nextPage.$doc.type !== "diff") {
+                //TODO, do this only when changes aren't cached already, and to this when file save event is emitted
                 //show unstaged and staged changes, use git diff without context
                 this.gitcCommands.send("git diff -U0 " + this.currentFile, this.addChanges.bind(this));
                 this.gitcCommands.send("git diff --cached -U0 " + this.currentFile, this.addChanges.bind(this));
                 //maintain gutter tooltips
-                //this.currentEditor.renderer.scrollBar.addEventListener("scroll", this.onScroll.bind(this));
                 this.currentEditor.on("mousemove", this.onMouseMove.bind(this));
+                this.currentEditor.setReadOnly(false);
+            } else {
+                this.currentEditor.setReadOnly(true);
             }
         },
         

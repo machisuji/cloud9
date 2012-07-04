@@ -339,8 +339,7 @@ module.exports = (function() {
                 throw ("Invalid State: neither lines nor start or end rows given (config: " +
                     config + ")")
             }
-            var editor = this.currentEditor || (
-                this.currentEditor = require("ext/gitc/gitc").gitEditorVis.currentEditor);
+            var editor = require("ext/gitc/gitc").gitEditorVis.currentEditor);
             var dom = require("ace/lib/dom");
             var oop = require("ace/lib/oop");
             var EventEmitter = require("ace/lib/event_emitter").EventEmitter;

@@ -21,7 +21,7 @@ module.exports = (function() {
 
         onOpenFile : function(e){
             if(!e.editor) return;
-            //initally set read only, beforeswitch event would be triggered too late
+            //initally set read only, needed due to beforeswitch event is triggered too late
             if (e.doc.type !== "diff") {
                 e.editor.amlEditor.$editor.setReadOnly(false);
             } else {
@@ -30,31 +30,45 @@ module.exports = (function() {
         },
 
         onTabSwitch : function(e){
-            if (e.nextPage.$editor.path !== "ext/code/code") {
-                //only code editors are of our concern
-                return;
-            }
-            this.currentFile = this.getFilePath(e.nextPage.id);
-            this.currentEditor = e.nextPage.$editor.amlEditor.$editor;
-
-            this.setGutterUpdateFunction(this.currentFile, this.currentEditor);
-            if (e.currentTarget.$activepage) {
+            // only code editors are of our concern, clean up our decorations
+            if (e.currentTarget.$activepage && e.currentTarget.$activepage.$editor.path === "ext/code/code") {
                 var closed_file   = this.getFilePath(e.currentTarget.$activepage.id);
                 var closed_editor = e.currentTarget.$activepage.$editor.amlEditor.$editor;
                 this.undecorate(closed_file, closed_editor);
             }
+            if (e.nextPage.$editor.path !== "ext/code/code") {
+                return;
+            }
 
-            if (e.nextPage.$doc.type !== "diff") {
-                //TODO, do this only when changes aren't cached already, and to this when file save event is emitted
-                //show unstaged and staged changes, use git diff without context
-                this.gitcCommands.send("git diff -U0 " + this.currentFile, this.addChanges.bind(this));
-                this.gitcCommands.send("git diff --cached -U0 " + this.currentFile, this.addChanges.bind(this));
+            // update own state, adjust gutter to our needs
+            this.currentFile = this.getFilePath(e.nextPage.id);
+            this.currentEditor = e.nextPage.$editor.amlEditor.$editor;
+            this.setGutterUpdateFunction(this.currentFile, this.currentEditor);
+
+            if (e.nextPage.$doc.type === "diff") {
+                //diff view is read only
+                this.currentEditor.setReadOnly(true);
+            } else {
+                this.currentEditor.setReadOnly(false);
+                // if there is no change information fetch it 
+                if (!this.annotations[this.currentFile]) {
+                    this.gitcCommands.send("git diff -U0 " + this.currentFile, this.addChanges.bind(this));
+                    this.gitcCommands.send("git diff --cached -U0 " + this.currentFile, this.addChanges.bind(this));
+                }
                 //maintain gutter tooltips
                 this.currentEditor.on("mousemove", this.onMouseMove.bind(this));
-                this.currentEditor.setReadOnly(false);
-            } else {
-                this.currentEditor.setReadOnly(true);
             }
+        },
+
+        /**
+         * On save fetch new diff data from git.
+         */
+        onSaveFile : function(e) {
+            if (e.editor.path !== "ext/code/code") {
+                return;
+            }
+            this.gitcCommands.send("git diff -U0 " + this.currentFile, this.addChanges.bind(this));
+            this.gitcCommands.send("git diff --cached -U0 " + this.currentFile, this.addChanges.bind(this));
         },
         
         getFilePath : function(filePath) {

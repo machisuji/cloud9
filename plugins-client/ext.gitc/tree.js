@@ -194,31 +194,80 @@ module.exports = ext.register("ext/gitc/tree", {
     },
 
     /**
+     * Takes a list of files and turns them into a tree structure.
+     * For instance:
+     *
+     *  [{path: "/foo/bar/run.sh", status: "added"}, {path: "/foo/blah.txt", status: "deleted"}]
+     *
+     * will become
+     *
+     *  some sort of tree
+     */
+    createFileTree: function createFileTree(files, name, path, root) {
+        var insert = function insert(tree, path, value) {
+            var node = tree;
+            for (var i = 0; i < path.length - 1; ++i) {
+                var seg = path[i];
+                if (node.folders[seg] === undefined) {
+                    node.folders[seg] = {path: path.slice(0, i + 1).join("/"), files: [], folders: {}};
+                }
+                node = node.folders[seg];
+            }
+            var file = path[path.length - 1];
+            node.files.push(value);
+        };
+        var tree = {path: ".", files: [], folders: {}};
+        if (name) {
+            tree.name = name;
+        }
+        if (path) {
+            tree.path = path;
+        }
+        if (root) {
+            tree.root = '1';
+        }
+        for (var i = 0; i < files.length; ++i) {
+            var path = files[i].path.split("/");
+            insert(tree, path, files[i]);
+        }
+        return tree;
+    },
+
+    /**
      * Creates a model usable by the tree from the given file paths.
      */
-    createModel: function createFileModel(rootName, files) {
-        var folders = _.groupBy(files, function(file) {
-            return _.initial(file.path.split("/")).join("/");
-        });
-        var root = folders[""] || []; delete folders[""];
-        var makeFile = function(file) {
+    createModel: function createModel(rootName, files) {
+        var makeFile = function makeFile(file) {
             return "<file type='file' path='" + file.path + "' name='" +
                 file.path.substring(file.path.lastIndexOf("/") + 1) + "' status='" + file.status + "' />";
         };
-        return "<data><folder type='folder' name='" + rootName + "' path='/workspace/' root='1'>" +
-            _.map(root, makeFile) +
-            _.map(Object.keys(folders).sort(), function(folder) {
-                var children = undefined;
-                if (folders[folder].length == 1 && folders[folder][0].path.match(".*/$")) { // it's a folder not added yet
-                    children = "";
-                } else {
-                    children = _.map(folders[folder], makeFile).join("")
-                }
-                return "<folder type='folder' path='" + folder + "' name='" +
-                    folder.substring(folder.lastIndexOf("/") + 1) + "'>" +
-                    children + "</folder>";
-            }).join("") +
-            "</folder></data>";
+        var makeFolder = function makeFolder(folder) {
+            var xml = "<folder type='folder' path='" + folder.path + "' name='";
+            if (folder.name) {
+                xml += folder.name;
+            } else {
+                xml += folder.path.substring(folder.path.lastIndexOf("/") + 1);
+            }
+            xml += "'";
+            if (folder.root) {
+                xml += " root='1'";
+            }
+            xml += ">";
+            var keys = Object.keys(folder.folders);
+            for (var i = 0; i < keys.length; ++i) {
+                xml += makeFolder(folder.folders[keys[i]]);
+            }
+            for (var i = 0; i < folder.files.length; ++i) {
+                xml += makeFile(folder.files[i]);
+            }
+            xml += "</folder>";
+
+            return xml;
+        };
+        var tree = this.createFileTree(files, rootName, "/workspace/", true);
+        var folder = makeFolder(tree);
+
+        return "<data>" + folder + "</data>";
     },
 
     onReady : function() {

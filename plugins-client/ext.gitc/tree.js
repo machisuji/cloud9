@@ -214,7 +214,11 @@ module.exports = ext.register("ext/gitc/tree", {
                 node = node.folders[seg];
             }
             var file = path[path.length - 1];
-            node.files.push(value);
+            if (file !== "") {
+                node.files.push(value);
+            } else {
+                node.status = value.status;
+            }
         };
         var tree = {path: ".", files: [], folders: {}};
         if (name) {
@@ -252,8 +256,11 @@ module.exports = ext.register("ext/gitc/tree", {
             if (folder.root) {
                 xml += " root='1'";
             }
+            if (folder.status) {
+                xml += " status='" + folder.status + "'";
+            }
             xml += ">";
-            var keys = Object.keys(folder.folders);
+            var keys = Object.keys(folder.folders).sort();
             for (var i = 0; i < keys.length; ++i) {
                 xml += makeFolder(folder.folders[keys[i]]);
             }

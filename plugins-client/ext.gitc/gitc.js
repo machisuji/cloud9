@@ -39,9 +39,7 @@ module.exports = ext.register("ext/gitc/gitc", {
         ide.addEventListener("socketMessage", this.gitcCommands.onMessage.bind(this.gitcCommands));
         ide.addEventListener("afteropenfile", this.gitEditorVis.onOpenFile);
         tabEditors.addEventListener("beforeswitch", this.gitEditorVis.onTabSwitch.bind(this.gitEditorVis));
-        ide.addEventListener("aftersavefile", this.gitEditorVis.onSaveFile.bind(this.gitEditorVis));
-
-
+        ide.addEventListener("afterfilesave", this.gitEditorVis.onSaveFile.bind(this.gitEditorVis));
     },
 
     enable : function(){

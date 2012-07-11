@@ -288,7 +288,6 @@ module.exports = (function() {
 							stagedParagraph.innerText = stagedParagraphs[i];
 							stagedDiv.appendChild(stagedParagraph);
 						}
-						stagedDiv.appendChild(this.createTooltipLinkBar(stagedAnnotation));
 						tooltip.appendChild(stagedDiv);
 					}
 				}
@@ -320,7 +319,6 @@ module.exports = (function() {
 							unstagedParagraph.innerText = unstagedParagraphs[i];
 							unstagedDiv.appendChild(unstagedParagraph);
 						}
-						unstagedDiv.appendChild(this.createTooltipLinkBar(unstagedAnnotation));
 						tooltip.appendChild(unstagedDiv);
 					}
 				}

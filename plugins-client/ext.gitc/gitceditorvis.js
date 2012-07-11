@@ -210,9 +210,15 @@ module.exports = (function() {
         undecorate : function(closedFile, editor) {
             if (this.annotations[closedFile]) {
                 var annotations = this.annotations[closedFile];
-                for (var annotation in annotations) {
-                    this.currentEditor.getSession().removeMarker(annotation.markerId);
-                }
+                _.each(Object.keys(annotations.staged), function(row) {
+                    var annotation = annotations.staged[row];
+                    editor.getSession().removeMarker(annotation.markerId);
+                });
+                
+                _.each(Object.keys(annotations.unstaged), function(row) {
+                    var annotation = annotations.unstaged[row];
+                    editor.getSession().removeMarker(annotation.markerId);
+                });
             }
         },
         /*undecorateGutterLine : function(annotation, editor) {

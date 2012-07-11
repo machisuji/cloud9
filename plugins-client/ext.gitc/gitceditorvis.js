@@ -7,6 +7,24 @@
 define(function(require, exports, module) {
 var Range = require("ace/range").Range;
 
+/**
+ * Creates a new DOM Element.
+ *
+ * @param label The element's name.
+ * @param attr A map defining the element's attributes.
+ */
+function elem(label, attr) {
+    attr = attr || {};
+
+    var e = document.createElement(label);
+    var keys = Object.keys(attr);
+
+    for (var i = 0; i < keys.length; ++i) {
+        e.setAttribute(keys[i], attr[keys[i]]);
+    }
+    return e;
+}
+
 module.exports = (function() {
     
     function GitEditorVis(gitccommands) {
@@ -420,16 +438,23 @@ module.exports = (function() {
             };
             if (lines) {
                 setTimeout(fun, 0);
+            } else {
+                self.currentEditor.renderer.$gutterLayer.update({
+                    firstRow: firstLineIndex, lastRow: lastLineIndex, reset: true})
             }
         },
 
         customUpdate: function(config) {
+            if (config.reset === true) {
+                this.lines = undefined;
+            }
+
             if (config.lines && config.override === true) {
                 this.lines = config.lines;
             } else if (this.lines) {
                 this.$config = config;
                 config.lines = this.lines;
-            } else if (config.lastRow) {
+            } else if (config.lastRow !== undefined) {
                 return this.$originalUpdate(config);
             } else {
                 throw ("Invalid State: neither lines nor start or end rows given (config: " +
@@ -510,6 +535,28 @@ module.exports = (function() {
                 }
                 gutter.update = this.customUpdate;
             }
+        },
+
+        showGitButtons: function(row) {
+            var lines = document.getElementsByClassName("ace_layer ace_gutter-layer")[0].childNodes;
+            var lineHeight = lines[row].clientHeight;
+            var div = elem("div", {
+                style: "top: " + (lineHeight * row) + "px;",
+                class: "stage-buttons"});
+            var stage = elem("a", {href: "#"});
+            stage.innerHTML = "Stage";
+            var discard = elem("a", {href: "#"});
+            discard.innerHTML = "Discard";
+            var icon = elem("div", {class: "spacer"});
+            icon.innerHTML = "&nbsp;";
+            var content = elem("div", {class: "content"})
+            content.appendChild(stage);
+            content.appendChild(discard);
+
+            div.appendChild(icon)
+            div.appendChild(content);
+
+            lines[row].appendChild(div);
         }
 
     };

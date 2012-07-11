@@ -102,12 +102,12 @@ module.exports = (function() {
         markGutterLine : function(annotation) {
 			if (annotation.type == "added") {
                 //this.currentEditor.renderer.addGutterDecoration(annotation.row, "gitc-added");
-				this.currentEditor.getSession().addMarker(new Range(annotation.row, 0, annotation.row, 1), "gitc-added-" + annotation.status, "background", true);
+				annotation.markerId = this.currentEditor.getSession().addMarker(new Range(annotation.row, 0, annotation.row, 1), "gitc-added-" + annotation.status, "background", true);
             } else if (annotation.type == "changed") {
                 //this.currentEditor.renderer.addGutterDecoration(annotation.row, "gitc-changed");
-				this.currentEditor.getSession().addMarker(new Range(annotation.row, 0, annotation.row, 1), "gitc-changed-" + annotation.status, "background", true);
+				annotation.markerId = this.currentEditor.getSession().addMarker(new Range(annotation.row, 0, annotation.row, 1), "gitc-changed-" + annotation.status, "background", true);
             } else if (annotation.type == "deleted") {
-    			this.currentEditor.getSession().addMarker(new Range(annotation.row, 0, annotation.row, 1), "gitc-removed-" + annotation.status, "background", true);
+    			annotation.markerId = this.currentEditor.getSession().addMarker(new Range(annotation.row, 0, annotation.row, 1), "gitc-removed-" + annotation.status, "background", true);
             };
         },
         
@@ -211,11 +211,11 @@ module.exports = (function() {
             if (this.annotations[closedFile]) {
                 var annotations = this.annotations[closedFile];
                 for (var annotation in annotations) {
-                    this.undecorateGutterLine(annotations[annotation], editor);
+                    this.currentEditor.getSession().removeMarker(annotation.markerId);
                 }
             }
         },
-        undecorateGutterLine : function(annotation, editor) {
+        /*undecorateGutterLine : function(annotation, editor) {
             if (annotation.type == "deleted") {
                 editor.renderer.removeGutterDecoration(annotation.row, "gitc-removed");
             } else if (annotation.type == "added") {
@@ -223,7 +223,7 @@ module.exports = (function() {
             } else if (annotation.type == "changed") {
                 editor.renderer.removeGutterDecoration(annotation.row, "gitc-changed");
             }
-        },
+        },*/
 
         decorate : function(filename) {
             if (filename !== this.currentFile) {

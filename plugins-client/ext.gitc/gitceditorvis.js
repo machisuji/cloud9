@@ -422,16 +422,23 @@ module.exports = (function() {
             };
             if (lines) {
                 setTimeout(fun, 0);
+            } else {
+                self.currentEditor.renderer.$gutterLayer.update({
+                    firstRow: firstLineIndex, lastRow: lastLineIndex, reset: true})
             }
         },
 
         customUpdate: function(config) {
+            if (config.reset === true) {
+                this.lines = undefined;
+            }
+
             if (config.lines && config.override === true) {
                 this.lines = config.lines;
             } else if (this.lines) {
                 this.$config = config;
                 config.lines = this.lines;
-            } else if (config.lastRow) {
+            } else if (config.lastRow !== undefined) {
                 return this.$originalUpdate(config);
             } else {
                 throw ("Invalid State: neither lines nor start or end rows given (config: " +

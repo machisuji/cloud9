@@ -142,3 +142,51 @@
 .mnubtn.gitc .icon {
   background-image:url(static/ext/gitc/images/gitc.png);
 }
+
+.stage-buttons {
+  position: absolute;
+  left: 0px;
+  border: 2px solid #5555CC;
+  background: #AACCFF;
+  overflow: hidden;
+  z-index: 1000;
+  border-radius: 0px 15px 15px 0px;
+  max-width: 500px;
+}
+
+.stage-buttons .spacer {
+  width: 15px; height: 15px;
+}
+
+.stage-buttons .content {
+  display: none;
+}
+
+.stage-buttons:hover {
+  width: 200px;
+  padding: 10px;
+}
+
+.stage-buttons:hover .content {
+  display: block;
+}
+
+.stage-buttons:hover .spacer {
+  display: none;
+}
+
+.stage-buttons a {
+  padding: 5px;
+  border: 1px ridge black;
+  text-decoration: none;
+  margin: 5px;
+  border-radius: 5px;
+}
+
+.stage-buttons a:visited {
+  color: black;
+}
+
+.stage-buttons a:hover {
+  background-color: #99BBEE;
+}

@@ -26,16 +26,12 @@ module.exports = (function() {
                 e.editor.amlEditor.$editor.setReadOnly(false);
             } else {
                 e.editor.amlEditor.$editor.setReadOnly(true);
+                
             }
         },
 
         onTabSwitch : function(e){
-            // only code editors are of our concern, clean up our decorations
-            if (e.currentTarget.$activepage && e.currentTarget.$activepage.$editor.path === "ext/code/code") {
-                var closed_file   = this.getFilePath(e.currentTarget.$activepage.id);
-                var closed_editor = e.currentTarget.$activepage.$editor.amlEditor.$editor;
-                this.undecorate(closed_file, closed_editor);
-            }
+            // only code editors are of our concern
             if (e.nextPage.$editor.path !== "ext/code/code") {
                 return;
             }
@@ -63,10 +59,13 @@ module.exports = (function() {
         /**
          * On save fetch new diff data from git.
          */
-        onSaveFile : function(e) {
-            if (e.editor.path !== "ext/code/code") {
+        onSaveFile : function(e) {         
+            if (e.doc.editor.path !== "ext/code/code") {
                 return;
             }
+            this.undecorate(this.currentFile, this.currentEditor);
+            this.annotations[this.currentFile] = undefined;
+            this.all_changes[this.currentFile] = undefined;
             this.gitcCommands.send("git diff -U0 " + this.currentFile, this.addChanges.bind(this));
             this.gitcCommands.send("git diff --cached -U0 " + this.currentFile, this.addChanges.bind(this));
         },
@@ -100,14 +99,15 @@ module.exports = (function() {
         },
 
         markGutterLine : function(annotation) {
-			if (annotation.type == "added") {
-                //this.currentEditor.renderer.addGutterDecoration(annotation.row, "gitc-added");
-				annotation.markerId = this.currentEditor.getSession().addMarker(new Range(annotation.row, 0, annotation.row, 1), "gitc-added-" + annotation.status, "background", true);
+            if (annotation.type == "added") {
+				annotation.markerId = this.currentEditor.getSession().addMarker(
+                    new Range(annotation.row, 0, annotation.row, 1), "gitc-added-" + annotation.status, "background", true);
             } else if (annotation.type == "changed") {
-                //this.currentEditor.renderer.addGutterDecoration(annotation.row, "gitc-changed");
-				annotation.markerId = this.currentEditor.getSession().addMarker(new Range(annotation.row, 0, annotation.row, 1), "gitc-changed-" + annotation.status, "background", true);
+				annotation.markerId = this.currentEditor.getSession().addMarker(
+                    new Range(annotation.row, 0, annotation.row, 1), "gitc-changed-" + annotation.status, "background", true);
             } else if (annotation.type == "deleted") {
-    			annotation.markerId = this.currentEditor.getSession().addMarker(new Range(annotation.row, 0, annotation.row, 1), "gitc-removed-" + annotation.status, "background", true);
+    			annotation.markerId = this.currentEditor.getSession().addMarker(
+                    new Range(annotation.row, 0, annotation.row, 1), "gitc-removed-" + annotation.status, "background", true);
             };
         },
         
@@ -130,12 +130,12 @@ module.exports = (function() {
                 return this.createAnnotation(line+1, "deleted", chunk, msg, status);
             } else if (annotation.type == "added") {
                 annotation.type = "changed";
-				return annotation;
+                return annotation;
             } else if (annotation.type == "changed") {
                 return this.createDeletedAnnotation(line+1, chunk, msg, status, filename)
             } else if (annotation.type == "deleted") {
                 annotation.text += ("\n" + msg);
-				return annotation;
+                return annotation;
             }
         },
         
@@ -210,26 +210,21 @@ module.exports = (function() {
         undecorate : function(closedFile, editor) {
             if (this.annotations[closedFile]) {
                 var annotations = this.annotations[closedFile];
-                _.each(Object.keys(annotations.staged), function(row) {
-                    var annotation = annotations.staged[row];
-                    editor.getSession().removeMarker(annotation.markerId);
-                });
-                
-                _.each(Object.keys(annotations.unstaged), function(row) {
-                    var annotation = annotations.unstaged[row];
-                    editor.getSession().removeMarker(annotation.markerId);
-                });
+                if (annotations.staged) {
+					_.each(Object.keys(annotations.staged), function(row) {
+						var annotation = annotations.staged[row];
+						editor.getSession().removeMarker(annotation.markerId);
+					});
+				}
+
+				if (annotations.unstaged) {
+					_.each(Object.keys(annotations.unstaged), function(row) {
+						var annotation = annotations.unstaged[row];
+						editor.getSession().removeMarker(annotation.markerId);
+					});
+				}
             }
         },
-        /*undecorateGutterLine : function(annotation, editor) {
-            if (annotation.type == "deleted") {
-                editor.renderer.removeGutterDecoration(annotation.row, "gitc-removed");
-            } else if (annotation.type == "added") {
-                editor.renderer.removeGutterDecoration(annotation.row, "gitc-added");
-            } else if (annotation.type == "changed") {
-                editor.renderer.removeGutterDecoration(annotation.row, "gitc-changed");
-            }
-        },*/
 
         decorate : function(filename) {
             if (filename !== this.currentFile) {

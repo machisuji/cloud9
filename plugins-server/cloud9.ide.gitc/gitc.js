@@ -38,11 +38,19 @@ var GitcPlugin = function(ide, workspace) {
 util.inherits(GitcPlugin, Plugin);
 
 (function() {
-
+    /**
+     * Initialize our plug-in: Register on eventbus to get notice
+     * of messages send via our channel and adjust message type so
+     * that other (client-side) extensions will not get notified
+     * about our stuff.
+     */
     this.init = function() {
 
         var self = this;
         this.eventbus.on(this.channel, function(msg) {
+            if (msg.extra.nobroadcast === true) {
+                return;
+            }
             if (msg.type == "shell-start") {
                 self.processCount += 1;
                 msg.type = "gitc-srt";
@@ -60,6 +68,10 @@ util.inherits(GitcPlugin, Plugin);
         });
     };
 
+    /**
+     * React on gitc-commands and spawn them as shell commands.
+     * When command contains argument "gitcdiff" then treat is separately.
+     */
     this.command = function (user, message, client) {
         var self = this;
         var cmd = message.command ? message.command.toLowerCase() : "";
@@ -68,20 +80,27 @@ util.inherits(GitcPlugin, Plugin);
             return false;
         }
 
+
         if (typeof message.protocol == "undefined")
             message.protocol = "client";
-
-        // git encourages newlines in commit messages; see also #678
-        // so if a \n is detected, treat them properly as newlines
-        if (message.argv[1] == "commit" && message.argv[2] == "-m") {
-            if (message.argv[3].indexOf("\\n") > -1) {
-                message.argv[3] = message.argv[3].replace(/\\n/g,"\n");
-            }
-        }
 
         //remove gitc command and execute actual command
         var args = message.argv.slice(1);
         message.extra.args = args;
+        
+        if (args[0] === "gitcdiff") {
+            //TODO echo will only take one argument and ignore further ones?!
+            //this.gitcdiff_command(user, message, client);
+            return true;
+        }
+
+        // git encourages newlines in commit messages; see also #678
+        // so if a \n is detected, treat them properly as newlines
+        if (args[1] == "commit" && args[2] == "-m") {
+            if (args[3].indexOf("\\n") > -1) {
+                args[3] = args[3].replace(/\\n/g,"\n");
+            }
+        }
 
         this.pm.spawn("shell", {
             command: args[0],
@@ -95,6 +114,61 @@ util.inherits(GitcPlugin, Plugin);
         });
 
         return true;
+    };
+
+    /**
+     * Special command: this will create a new file with the not yet saved
+     * file content. Thus we can execute git diff with the original file and
+     * get the differences.
+     */
+    this.gitcdiff_command = function(user, message, client) {
+        var args;
+        //save tmp file to execute git diff .... "touch", "~tmp.txt"];
+        args = ["echo" ,"\"" + message.extra.new_file_content + "\"", ">", "~tmp.txt"];
+        this.pm.spawn("shell", {
+            command: args[0],
+            args: args.slice(1),
+            cwd: message.cwd,
+            env: this.gitEnv,
+            extra: {nobroadcast: true}
+        }, this.channel, function(err, pid) {
+            if (err)
+                self.error(err, 1, message, client);
+        });
+       
+        //execute git diff
+        var args = ["git", "diff", "--no-index"];
+        message.args.slice(1); //remove gitcdiff
+        for (var i = 0; i < message.args.length - 1; i++) { //append arguments
+            args.push(message.args[i]);
+        }
+        args.push("--"); //append files to be diffed
+        args.push("~tmp.txt");
+        args.push(message.args[message.args.length]);
+
+        this.pm.spawn("shell", {
+            command: args[0],
+            args: args.slice(1),
+            cwd: message.cwd,
+            env: this.gitEnv,
+            extra: message.extra
+        }, this.channel, function(err, pid) {
+            if (err)
+                self.error(err, 1, message, client);
+        });
+
+        //remove tmp file
+        args = ["rm", "~tmp.txt"];
+        this.pm.spawn("shell", {
+            command: args[0],
+            args: args.slice(1),
+            cwd: message.cwd,
+            env: this.gitEnv,
+            extra: {nobroadcast: true}
+        }, this.channel, function(err, pid) {
+            if (err)
+                self.error(err, 1, message, client);
+        });
     };
 
     this.canShutdown = function() {

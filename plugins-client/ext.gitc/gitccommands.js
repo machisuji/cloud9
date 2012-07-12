@@ -29,7 +29,7 @@ module.exports = (function() {
          *          command is caught. The callback will get the output as the first argument
          *          and the stream ("stdout", "stderr") as second.
          */
-        send : function(command, callback) {
+        send : function(command, callback, extra) {
             if(!command)
                 return; //no command
 
@@ -37,18 +37,17 @@ module.exports = (function() {
             var argv = parseLine(command);
             if (!argv || argv.length === 0) // no command
                 return;
-
             argv.unshift("gitc");
 
+            var extra = extra || {};
+            extra.command_id = this.command_id_tracer;
             var data = {
                 command: argv[0],
                 argv: argv,
                 line: command,
                 cwd: ide.workspaceDir,
                 requireshandling: false,
-                extra : {
-                    command_id : this.command_id_tracer
-                }
+                extra : extra
             }
 
             if(!ide.onLine) {
@@ -89,9 +88,8 @@ module.exports = (function() {
                 delete this.pid_to_message_map[msg.pid];
             }
         }
-
     };
-
+    
     return GitCommands;
 })();
 

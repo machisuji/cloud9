@@ -71,6 +71,7 @@ module.exports = (function() {
                 }
                 //maintain gutter tooltips
                 this.currentEditor.on("mousemove", this.onMouseMove.bind(this));
+                this.currentEditor.on("change", this.onEditorChange.bind(this));
             }
         },
 
@@ -86,6 +87,16 @@ module.exports = (function() {
             this.all_changes[this.currentFile] = undefined;
             this.gitcCommands.send("git diff -U0 " + this.currentFile, this.addChanges.bind(this));
             this.gitcCommands.send("git diff --cached -U0 " + this.currentFile, this.addChanges.bind(this));
+        },
+
+        onEditorChange : function(e) {
+            this.undecorate(this.currentFile, this.currentEditor);
+            this.annotations[this.currentFile] = undefined;
+            this.all_changes[this.currentFile] = undefined;
+            var file_content = this.currentEditor.getSession().getValue();
+            file_content = file_content;
+            this.gitcCommands.send("gitcdiff -U0 " + this.currentFile, this.addChanges.bind(this), {new_file_content: file_content});
+            this.gitcCommands.send("gitcdiff --cached -U0 " + this.currentFile, this.addChanges.bind(this), {new_file_content: file_content});
         },
         
         getFilePath : function(filePath) {

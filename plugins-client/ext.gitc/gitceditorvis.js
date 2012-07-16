@@ -29,10 +29,11 @@ module.exports = (function() {
     
     function GitEditorVis(gitccommands) {
         this.gitcCommands = gitccommands;
-        this.currentEditor = undefined;
-        this.currentFile = undefined;
-        this.all_changes = {};
-        this.annotations = {};
+        this.all_changes  = {};
+        this.currentEditor= undefined;
+        this.currentFile  = undefined;
+        this.new_annotations     = {};
+        this.current_annotations = {};
     }
 
     GitEditorVis.prototype = {
@@ -44,7 +45,6 @@ module.exports = (function() {
                 e.editor.amlEditor.$editor.setReadOnly(false);
             } else {
                 e.editor.amlEditor.$editor.setReadOnly(true);
-                
             }
         },
 
@@ -64,14 +64,15 @@ module.exports = (function() {
                 this.currentEditor.setReadOnly(true);
             } else {
                 this.currentEditor.setReadOnly(false);
-                // if there is no change information fetch it 
-                if (!this.annotations[this.currentFile]) {
+                //treat the file if not done yet
+                if (!this.all_changes[this.currentFile]) {
+                    // fetch change information fetch
                     this.gitcCommands.send("git diff -U0 " + this.currentFile, this.addChanges.bind(this));
                     this.gitcCommands.send("git diff --cached -U0 " + this.currentFile, this.addChanges.bind(this));
+                    //register on editor evetns (TODO: but only once)
+                    this.currentEditor.on("mousemove", this.onMouseMove.bind(this));
+                    this.currentEditor.on("change", this.onEditorChange.bind(this));
                 }
-                //maintain gutter tooltips
-                this.currentEditor.on("mousemove", this.onMouseMove.bind(this));
-                this.currentEditor.on("change", this.onEditorChange.bind(this));
             }
         },
 
@@ -82,19 +83,16 @@ module.exports = (function() {
             if (e.doc.editor.path !== "ext/code/code") {
                 return;
             }
-            this.undecorate(this.currentFile, this.currentEditor);
-            this.annotations[this.currentFile] = undefined;
+            this.new_annotations[this.currentFile] = undefined;
             this.all_changes[this.currentFile] = undefined;
             this.gitcCommands.send("git diff -U0 " + this.currentFile, this.addChanges.bind(this));
             this.gitcCommands.send("git diff --cached -U0 " + this.currentFile, this.addChanges.bind(this));
         },
 
         onEditorChange : function(e) {
-            this.undecorate(this.currentFile, this.currentEditor);
-            this.annotations[this.currentFile] = undefined;
+            this.new_annotations[this.currentFile] = undefined;
             this.all_changes[this.currentFile] = undefined;
             var file_content = this.currentEditor.getSession().getValue();
-            file_content = file_content;
             this.gitcCommands.send("gitcdiff -U0 " + this.currentFile, this.addChanges.bind(this), {new_file_content: file_content});
             this.gitcCommands.send("gitcdiff --cached -U0 " + this.currentFile, this.addChanges.bind(this), {new_file_content: file_content});
         },
@@ -154,7 +152,7 @@ module.exports = (function() {
         },
         
         createDeletedAnnotation : function(line, chunk, msg, status, filename) {
-            var annotation = this.annotations[filename][status][line];
+            var annotation = this.current_annotations[filename][status][line];
             if (!annotation) {
                 return this.createAnnotation(line+1, "deleted", chunk, msg, status);
             } else if (annotation.type == "added") {
@@ -169,11 +167,11 @@ module.exports = (function() {
         },
         
         createTooltips : function() {
-            if (!this.annotations[this.currentFile]) {
+            if (!this.current_annotations[this.currentFile]) {
                 return;
             }
 
-            var file_annotations = this.annotations[this.currentFile]
+            var file_annotations = this.current_annotations[this.currentFile]
             var lines = this.currentEditor.getSession().getLength();
             var lastAnnotation = null;
             for (var i = 1; i <= lines; i++) {
@@ -236,9 +234,9 @@ module.exports = (function() {
             return commitRevertP;
         },
         
-        undecorate : function(closedFile, editor) {
-            if (this.annotations[closedFile]) {
-                var annotations = this.annotations[closedFile];
+        undecorate : function(filename, editor) {
+            if (this.current_annotations[filename]) {
+                var annotations = this.current_annotations[filename];
                 if (annotations.staged) {
 					_.each(Object.keys(annotations.staged), function(row) {
 						var annotation = annotations.staged[row];
@@ -261,17 +259,21 @@ module.exports = (function() {
             }
             this.createTooltips();
             
-            if (this.all_changes[this.currentFile].unstaged && this.all_changes[this.currentFile].staged && this.annotations[this.currentFile]) {
+            if (this.all_changes[this.currentFile].unstaged && this.all_changes[this.currentFile].staged && this.new_annotations[this.currentFile]) {
+                //beforehand undecorate old annotations
+                this.undecorate(filename, this.currentEditor);
                 //add gutter decoration for all annotations
-                var stagedAnnotations = this.annotations[this.currentFile].staged;
+                var stagedAnnotations = this.new_annotations[this.currentFile].staged;
                 for (var i in stagedAnnotations) {
                     this.markGutterLine(stagedAnnotations[i]);
                 }
 
-				var unstagedAnnotations = this.annotations[this.currentFile].unstaged;
+				var unstagedAnnotations = this.new_annotations[this.currentFile].unstaged;
                 for (var i in unstagedAnnotations) {
                     this.markGutterLine(unstagedAnnotations[i]);
                 }
+                this.current_annotations[filename] = this.new_annotations[filename];
+                this.new_annotations[filename] = undefined;
             }
         },
 
@@ -284,13 +286,13 @@ module.exports = (function() {
 			var row = e.getDocumentPosition().row;
 			var column = e.getDocumentPosition().column;
 			
-			if (column == 0 && this.annotations[this.currentFile]) {
+			if (column == 0 && this.current_annotations[this.currentFile]) {
 				var tooltip = document.createElement('div');
                 tooltip.className = "gitc-tooltip";
 				tooltip.setAttribute("style", "left: " + (e.domEvent.layerX + 10).toString() + "px; top: " + e.domEvent.layerY.toString() + "px;");
 
-				if (this.annotations[this.currentFile].staged) {
-					var stagedAnnotation = this.annotations[this.currentFile].staged[row.toString()];
+				if (this.current_annotations[this.currentFile].staged) {
+					var stagedAnnotation = this.current_annotations[this.currentFile].staged[row.toString()];
 					if (stagedAnnotation) {
 						var stagedDiv = document.createElement('div');
 						stagedDiv.className = "staged-" + stagedAnnotation.type;
@@ -298,17 +300,17 @@ module.exports = (function() {
 						
 						var stagedText = stagedAnnotation.text;
 						var prevRow = row-1;
-						var prevAnnotation = this.annotations[this.currentFile].staged[prevRow.toString()];
+						var prevAnnotation = this.current_annotations[this.currentFile].staged[prevRow.toString()];
 						while (prevAnnotation && prevAnnotation.type == stagedAnnotation.type) {
 							stagedText = prevAnnotation.text + "\n" + stagedText;
-							prevAnnotation = this.annotations[this.currentFile].staged[(--prevRow).toString()];
+							prevAnnotation = this.current_annotations[this.currentFile].staged[(--prevRow).toString()];
 						}
 						
 						var nextRow = row+1;
-						var nextAnnotation = this.annotations[this.currentFile].staged[nextRow.toString()];
+						var nextAnnotation = this.current_annotations[this.currentFile].staged[nextRow.toString()];
 						while (nextAnnotation && nextAnnotation.type == stagedAnnotation.type) {
 							stagedText = stagedText + "\n" + nextAnnotation.text;
-							nextAnnotation = this.annotations[this.currentFile].staged[(++nextRow).toString()];
+							nextAnnotation = this.current_annotations[this.currentFile].staged[(++nextRow).toString()];
 						}
 						
 						var stagedParagraphs = stagedText.split("\n");
@@ -321,25 +323,25 @@ module.exports = (function() {
 					}
 				}
 				
-				if (this.annotations[this.currentFile].unstaged) {
-					var unstagedAnnotation = this.annotations[this.currentFile].unstaged[row.toString()];
+				if (this.current_annotations[this.currentFile].unstaged) {
+					var unstagedAnnotation = this.current_annotations[this.currentFile].unstaged[row.toString()];
 					if (unstagedAnnotation) {
 						var unstagedDiv = document.createElement('div');
 						unstagedDiv.className = "unstaged-" + unstagedAnnotation.type;
 						
 						var unstagedText = unstagedAnnotation.text;
 						var prevRow = row-1;
-						var prevAnnotation = this.annotations[this.currentFile].unstaged[prevRow.toString()];
+						var prevAnnotation = this.current_annotations[this.currentFile].unstaged[prevRow.toString()];
 						while (prevAnnotation && prevAnnotation.type == unstagedAnnotation.type) {
 							unstagedText = prevAnnotation.text + "\n" + unstagedText;
-							prevAnnotation = this.annotations[this.currentFile].unstaged[(--prevRow).toString()];
+							prevAnnotation = this.current_annotations[this.currentFile].unstaged[(--prevRow).toString()];
 						}
 						
 						var nextRow = row+1;
-						var nextAnnotation = this.annotations[this.currentFile].unstaged[nextRow.toString()];
+						var nextAnnotation = this.current_annotations[this.currentFile].unstaged[nextRow.toString()];
 						while (nextAnnotation && nextAnnotation.type == unstagedAnnotation.type) {
 							unstagedText = unstagedText + "\n" + nextAnnotation.text;
-							nextAnnotation = this.annotations[this.currentFile].unstaged[(++nextRow).toString()];
+							nextAnnotation = this.current_annotations[this.currentFile].unstaged[(++nextRow).toString()];
 						}
 
 						var unstagedParagraphs = unstagedText.split("\n");
@@ -358,12 +360,12 @@ module.exports = (function() {
 		},
         
         annotateChunks : function(chunks, status, filename) {
-            if (!this.annotations[filename]) {
-				this.annotations[filename] = {};
+            if (!this.new_annotations[filename]) {
+				this.new_annotations[filename] = {};
             }
             
-            if (!this.annotations[filename][status]) {
-                this.annotations[filename][status] = {};
+            if (!this.new_annotations[filename][status]) {
+                this.new_annotations[filename][status] = {};
                 
                 var deletedLines = [];
 
@@ -374,7 +376,7 @@ module.exports = (function() {
     					var line = chunk.lines[j];
                         if (line.status == "added") {
                             var annotation = this.createAnnotation(line.number_new-1, line.status, chunk, line.content, status);
-                            this.annotations[filename][status][annotation.row.toString()] = annotation;
+                            this.new_annotations[filename][status][annotation.row.toString()] = annotation;
                         } else if (line.status == "deleted"){
 							var k = -1;
 							while (++k < deletedLines.length && deletedLines[k].number_old < line.number_old);
@@ -387,58 +389,11 @@ module.exports = (function() {
 					var line = deletedLines[i];
                     if (line.status == "deleted") {
                         var annotation = this.createDeletedAnnotation(line.number_new-1, chunk, line.content, status, filename);
-                        this.annotations[filename][status][annotation.row.toString()] = annotation;
+                        this.new_annotations[filename][status][annotation.row.toString()] = annotation;
                     }
 				}
             }
         },
-        
-        isChangeAnnotation : function(annotation, filename) {
-            var key = annotation.row.toString();
-            var other = this.annotations[filename][key];
-            return other && 
-                (annotation.type == "deleted" && other.type == "added" || 
-                annotation.type == "added" && other.type == "deleted");
-        },
-
-        addMissingDecoration : function() {
-            var gutterCells = document.getElementsByClassName('ace_gutter-cell');
-            var firstLineIndex = this.currentEditor.renderer.getFirstVisibleRow();
-            for (var i = 0; i < gutterCells.length; i++) {
-				if (this.annotations[this.currentFile].staged) {
-					var stagedAnnotation = this.annotations[this.currentFile].staged[(firstLineIndex+i).toString()];
-					this.addMissingDeletedDecoration(stagedAnnotation, gutterCells[i]);
-				}
-                
-				if (this.annotations[this.currentFile].unstaged) {
-					var unstagedAnnotation = this.annotations[this.currentFile].unstaged[(firstLineIndex+i).toString()];
-					this.addMissingDeletedDecoration(unstagedAnnotation, gutterCells[i]);
-				}
-            }
-        },
-
-		addMissingDeletedDecoration : function(annotation, cell) {
-			if (!annotation)
-				return;
-			
-			//add deleted line marker, if not at start of visible gutter area (otherwise, marker would not be visible anyway)
-            if (annotation.type == "deleted" && cell.previousSibling != undefined) {
-                var marker = document.createElement('div');
-                marker.classList.add("ace_gutter-cell");
-                marker.classList.add("gitc-removed");
-                marker.setAttribute("style", "height: 2px");
-
-                cell.setAttribute("style", "height: 15px");
-                cell.previousSibling.setAttribute("style", "height: 15px");
-                cell.parentNode.insertBefore(marker, cell);
-                cell = marker;
-            }
-
-            //add tooltip
-            if (annotation.tooltip) {
-                cell.appendChild(annotation.tooltip);
-            }
-		},
         
         updateLineNumbers : function(lines) {
             var firstLineIndex = this.currentEditor.renderer.getFirstVisibleRow();

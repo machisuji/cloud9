@@ -4,6 +4,7 @@ var util = require("util");
 
 var Plugin = require("../cloud9.core/plugin");
 var c9util = require("../cloud9.core/util");
+var Fs = require("fs");
 
 var name = "gitc";
 var ProcessManager;
@@ -90,8 +91,8 @@ util.inherits(GitcPlugin, Plugin);
         
         if (args[0] === "gitcdiff") {
             //TODO echo will only take one argument and ignore further ones?!
-            //this.gitcdiff_command(user, message, client);
-            return true;
+            return this.gitcdiff_command(user, message, client);
+            //return true;
         }
 
         // git encourages newlines in commit messages; see also #678
@@ -123,28 +124,24 @@ util.inherits(GitcPlugin, Plugin);
      */
     this.gitcdiff_command = function(user, message, client) {
         var args;
-        //save tmp file to execute git diff .... "touch", "~tmp.txt"];
-        args = ["echo" ,"\"" + message.extra.new_file_content + "\"", ">", "~tmp.txt"];
-        this.pm.spawn("shell", {
-            command: args[0],
-            args: args.slice(1),
-            cwd: message.cwd,
-            env: this.gitEnv,
-            extra: {nobroadcast: true}
-        }, this.channel, function(err, pid) {
-            if (err)
+        //save tmp file to execute git diff
+        Fs.writeFile("~tmp.txt", message.extra.new_file_content, function (err) {
+            if (err) {
+                console.log("error writing tmp diff file");
                 self.error(err, 1, message, client);
+                return false;
+            }
         });
        
         //execute git diff
         var args = ["git", "diff", "--no-index"];
-        message.args.slice(1); //remove gitcdiff
-        for (var i = 0; i < message.args.length - 1; i++) { //append arguments
-            args.push(message.args[i]);
+        var msg_args = message.extra.args.slice(1); //remove gitcdiff
+        for (var i = 0; i < msg_args.length - 1; i++) { //append arguments
+            args.push(msg_args[i]);
         }
         args.push("--"); //append files to be diffed
         args.push("~tmp.txt");
-        args.push(message.args[message.args.length]);
+        args.push(msg_args[msg_args.length-1]);
 
         this.pm.spawn("shell", {
             command: args[0],
@@ -169,6 +166,7 @@ util.inherits(GitcPlugin, Plugin);
             if (err)
                 self.error(err, 1, message, client);
         });
+        return true;
     };
 
     this.canShutdown = function() {

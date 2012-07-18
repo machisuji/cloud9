@@ -90,11 +90,23 @@ module.exports = (function() {
         },
 
         onEditorChange : function(e) {
+            //TODO only unstaged...
+            var success_msg = "file content written";            
             this.new_annotations[this.currentFile] = undefined;
             this.all_changes[this.currentFile] = undefined;
+            //first write new file content
             var file_content = this.currentEditor.getSession().getValue();
-            this.gitcCommands.send("gitcdiff -U0 " + this.currentFile, this.addChanges.bind(this), {new_file_content: file_content});
-            this.gitcCommands.send("gitcdiff --cached -U0 " + this.currentFile, this.addChanges.bind(this), {new_file_content: file_content});
+            this.gitcCommands.send(
+                "gitcdiff writefile " + this.currentFile,
+                function(output){ //then execute diff
+                    if(output.stream === "stdout" & output.data.indexOf(success_msg) === 0) {
+                        this.gitcCommands.send("gitcdiff -U0 " + this.currentFile,
+                                               this.addChanges.bind(this));
+                    }
+                }.bind(this),
+                {new_file_content: file_content, success: success_msg});
+
+            this.gitcCommands.send("git diff --cached -U0 " + this.currentFile, this.addChanges.bind(this));
         },
         
         getFilePath : function(filePath) {
@@ -152,7 +164,7 @@ module.exports = (function() {
         },
         
         createDeletedAnnotation : function(line, chunk, msg, status, filename) {
-            var annotation = this.current_annotations[filename][status][line];
+            var annotation = this.new_annotations[filename][status][line];
             if (!annotation) {
                 return this.createAnnotation(line+1, "deleted", chunk, msg, status);
             } else if (annotation.type == "added") {

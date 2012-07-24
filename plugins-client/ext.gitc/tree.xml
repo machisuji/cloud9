@@ -120,6 +120,10 @@
                 <a:drop match="[folder|file]" target="[file]"
                     action="insert-before" copy="{event.ctrlKey}" />    
             </a:tree>
+
+            <a:text id="commit-label" value="Commit Message" class="panel-label" />
+            <a:textarea id="commit-message" height="60" width="100%" class="id-commit-message" />
+            <a:button id="commit-button" caption="Commit" class="id-commit-button" />
         </a:vbox>
         
         <a:menu id="mnuCtxTree" disabled="{{!stServerConnected.active}}" render="runtime">

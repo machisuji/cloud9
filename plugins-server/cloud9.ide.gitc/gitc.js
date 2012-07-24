@@ -113,9 +113,9 @@ util.inherits(GitcPlugin, Plugin);
         } else if (args[0] == "gitc_stage") {
             finalCmd = "./plugins-server/cloud9.ide.gitc/git_stage.sh"
         } else if (args[0] == "gitc_unstage") {
-            finalCmd = "./plugins-server/cloud9.ide.gitc/gitc_unstage.sh"
+            finalCmd = "./plugins-server/cloud9.ide.gitc/git_unstage.sh"
         } else if (args[0] == "gitc_discard") {
-            finalCmd = "./plugins-server/cloud9.ide.gitc/gitc_discard.sh"
+            finalCmd = "./plugins-server/cloud9.ide.gitc/git_discard.sh"
         }
 
         this.pm.spawn("shell", {

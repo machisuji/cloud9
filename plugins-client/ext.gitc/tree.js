@@ -335,7 +335,11 @@ module.exports = ext.register("ext/gitc/tree", {
             };
 
             if (node.getAttribute("status") == "changed") {
-                gcc.send("git diff " + node.getAttribute("path"), function(output, parser) {
+                var cmd = "git diff ";
+                if (staged) {
+                    cmd += "--cached ";
+                }
+                gcc.send(cmd + node.getAttribute("path"), function(output, parser) {
                     var result = parser.parseDiff(output.data, output.stream, true)[0];
                     var chunks = result.chunks;
                     var content = "";

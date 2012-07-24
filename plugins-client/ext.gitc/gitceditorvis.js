@@ -573,29 +573,45 @@ module.exports = (function() {
             }
         },
 
-        showGitButtons: function(row, chunk) {
+        showGitButtons: function(row, chunk, forWorkingTree) {
+            forWorkingTree = forWorkingTree || true; // we're talking staged changes otherwise
+
             var lines = document.getElementsByClassName("ace_layer ace_gutter-layer")[0].childNodes;
             var lineHeight = lines[row].clientHeight;
             var div = elem("div", {
                 style: "top: " + (lineHeight * row) + "px;",
                 class: "stage-buttons"});
-            var stage = elem("a", {href:
-                "javascript: require('ext/gitc/tree').stage({file: '" + chunk.file + "', start: " + chunk.start +
-                    ", length: " + chunk.length + "});"
-            });
-            stage.innerHTML = "Stage";
-
-            var discard = elem("a", {href:
-                "javascript: require('ext/gitc/tree').unstage({file: '" + chunk.file + "', start: " + chunk.start +
-                    ", length: " + chunk.length + "});"
-            });
-            discard.innerHTML = "Discard";
 
             var icon = elem("div", {class: "spacer"});
             icon.innerHTML = "&nbsp;";
             var content = elem("div", {class: "content"})
-            content.appendChild(stage);
-            content.appendChild(discard);
+
+            if (forWorkingTree) {
+                var stage = elem("a", {href:
+                    "javascript: require('ext/gitc/tree').stage({file: '" + chunk.file + "', start: " + chunk.start +
+                        ", length: " + chunk.length + "});"
+                });
+                stage.innerHTML = "Stage";
+
+                var discard = elem("a", {href:
+                    "javascript: require('ext/gitc/tree').discard({file: '" + chunk.file + "', start: " + chunk.start +
+                        ", length: " + chunk.length + "});"
+                });
+                discard.innerHTML = "Discard";
+
+                content.appendChild(stage);
+                content.appendChild(discard);
+            } else {
+                var unstage = elem("a", {href:
+                    "javascript: require('ext/gitc/tree').unstage({file: '" + chunk.file + "', start: " + chunk.start +
+                        ", length: " + chunk.length + "});"
+                });
+                unstage.innerHTML = "Unstage";
+
+                content.appendChild(unstage);
+            }
+
+            
 
             div.appendChild(icon)
             div.appendChild(content);

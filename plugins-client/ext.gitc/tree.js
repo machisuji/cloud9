@@ -434,6 +434,13 @@ module.exports = ext.register("ext/gitc/tree", {
         });
     },
 
+    discard : function(chunk) {
+        var gcc = require("ext/gitc/gitc").gitcCommands;
+        gcc.send("gitc_discard " + chunk.file + " " + chunk.start + " " + chunk.length, function(output, parser) {
+            console.log(output.data);
+        });
+    },
+
     init : function() {
         var _self = this;
 

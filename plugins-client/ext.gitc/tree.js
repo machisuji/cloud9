@@ -366,6 +366,15 @@ module.exports = ext.register("ext/gitc/tree", {
                 var path = trimPath(node.getAttribute("path"));
 
                 gcc.send(cmd + path, function(output, parser) {
+                    var noDiff = output.data === ""
+
+                    if (noDiff) {
+                        var session = require("ext/gitc/gitc").gitEditorVis.currentEditor.getSession();
+                        session.setValue("no changes");
+                        require("ext/gitc/gitc").gitEditorVis.updateLineNumbers();
+                        return;
+                    }
+
                     var result = parser.parseDiff(output.data, output.stream, true)[0];
                     var chunks = result.chunks;
                     var content = "";
@@ -473,7 +482,6 @@ module.exports = ext.register("ext/gitc/tree", {
             var afterChoose = self.$afterchoose.bind(self.getWorkingDirTree());
             self.refresh();
             afterChoose({}, true); // update editor
-            console.log(output.data);
         });
     },
 

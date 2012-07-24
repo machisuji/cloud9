@@ -159,7 +159,7 @@ module.exports = ext.register("ext/gitc/tree", {
             return !diff;
         });
 
-        ide.addEventListener("afteropenfile", function(e) {
+        ide.addEventListener("afteropenfile", this.$afteropenfile = function(e) {
             var doc = e.doc; if (!doc.editor || !doc.ranges) return true;
             var editor = e.editor.amlEditor.$editor;
             var markRows = function markRows() {
@@ -172,13 +172,16 @@ module.exports = ext.register("ext/gitc/tree", {
             setTimeout(markRows, 25);
         });
 
-        tabEditors.addEventListener("afterswitch", function(e) {
+        tabEditors.addEventListener("afterswitch", this.$afterswitch = function(e) {
             var doc = e.nextPage.$doc;
             require("ext/gitc/gitc").gitEditorVis.updateLineNumbers(doc.lines, doc.chunkIndices);
         });
     },
 
-    showDiff: function showDiff(title, diff, ranges, lines, chunkIndices) {
+    showDiff: function showDiff(title, diff, ranges, lines, chunkIndices, update) {
+        if (update === undefined) {
+            update = false;
+        }
         var staged = false;
         var path = "diff for ";
         if (chunkIndices.length > 0 && chunkIndices[0].staged) {
@@ -197,7 +200,17 @@ module.exports = ext.register("ext/gitc/tree", {
         doc.ranges = ranges;
         doc.lines = lines;
         doc.chunkIndices = chunkIndices;
-        ide.dispatchEvent("openfile", {doc: doc, type: "newfile"});
+
+        if (!update) {
+            ide.dispatchEvent("openfile", {doc: doc, type: "newfile"});
+        } else {
+            var ve = require("ext/gitc/gitc").gitEditorVis;
+            var editor = ve.currentEditor
+
+            editor.getSession().setValue(diff);
+            this.$afteropenfile({doc: doc, editor: editor})
+            this.$afterswitch({nextPage: {"$doc": doc}})
+        }
 
         return doc;
     },
@@ -312,7 +325,7 @@ module.exports = ext.register("ext/gitc/tree", {
         };
         this.updateStatus();
 
-        diffFiles.addEventListener("afterchoose", this.$afterchoose = function() {
+        diffFiles.addEventListener("afterchoose", this.$afterchoose = function(e, update) {
             var node = this.selected;
             if (!node || node.tagName != "file" || this.selection.length > 1 ||
                 !ide.onLine && !ide.offlineFileSystemSupport) //ide.onLine can be removed after update apf
@@ -412,7 +425,7 @@ module.exports = ext.register("ext/gitc/tree", {
                         }));
                     }), true /* flatten only one level */);
 
-                    _self.showDiff(fileName, content, ranges, lines, chunkIndices(chunks));
+                    _self.showDiff(fileName, content, ranges, lines, chunkIndices(chunks), update);
                 });
             } else if (node.getAttribute("status") == "added") {
                 var Range = require("ace/range").Range;
@@ -444,7 +457,9 @@ module.exports = ext.register("ext/gitc/tree", {
         var gcc = require("ext/gitc/gitc").gitcCommands;
         var self = this;
         gcc.send("gitc_stage " + chunk.file + " " + chunk.start + " " + chunk.length, function(output, parser) {
+            var afterChoose = self.$afterchoose.bind(self.getWorkingDirTree());
             self.refresh();
+            afterChoose({}, true); // update editor
             console.log(output.data);
         });
     },
@@ -453,7 +468,9 @@ module.exports = ext.register("ext/gitc/tree", {
         var gcc = require("ext/gitc/gitc").gitcCommands;
         var self = this;
         gcc.send("gitc_unstage " + chunk.file + " " + chunk.start + " " + chunk.length, function(output, parser) {
+            var afterChoose = self.$afterchoose.bind(self.getWorkingDirTree());
             self.refresh();
+            afterChoose({}, true); // update editor
             console.log(output.data);
         });
     },
@@ -462,7 +479,9 @@ module.exports = ext.register("ext/gitc/tree", {
         var gcc = require("ext/gitc/gitc").gitcCommands;
         var self = this;
         gcc.send("gitc_discard " + chunk.file + " " + chunk.start + " " + chunk.length, function(output, parser) {
+            var afterChoose = self.$afterchoose.bind(self.getStageTree());
             self.refresh();
+            afterChoose({}, true); // update editor
             console.log(output.data);
         });
     },

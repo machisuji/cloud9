@@ -533,6 +533,21 @@ module.exports = ext.register("ext/gitc/tree", {
         this.panel = winDiffView;
         this.nodes.push(winDiffView);
 
+        this.getCommitButton().addEventListener("click", function(e) {
+            if (e.currentTarget.id == "commit-button") {
+                var text = _self.getCommitMessageTextField();
+                var msg = text.getValue();
+
+                // commit
+                var gcc = require("ext/gitc/gitc").gitcCommands;
+                gcc.send("git commit -m \"" + msg + "\"", function(output, parser) {
+                    alert(output.data);
+                    text.setValue("");
+                    _self.refresh();
+                });
+            }
+        });
+
         ide.addEventListener("afteroffline", function(){
             diffFiles.selectable = false;
             stageFiles.selectable = false;
@@ -604,6 +619,14 @@ module.exports = ext.register("ext/gitc/tree", {
 
     getTree: function(module) {
         return this.getWorkingDirTree(module);
+    },
+
+    getCommitMessageTextField: function() {
+        return this.panel.childNodes[3].childNodes[5];
+    },
+
+    getCommitButton: function() {
+        return this.panel.childNodes[3].childNodes[6];
     },
 
     moveFile : function(path, newpath){

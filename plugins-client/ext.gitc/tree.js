@@ -572,7 +572,7 @@ module.exports = ext.register("ext/gitc/tree", {
 
     getStageTree: function(module) {
         module = module || this;
-        return module.panel.childNodes[3].childNodes[4];
+        return module.panel.childNodes[3].childNodes[3];
     },
 
     getTree: function(module) {

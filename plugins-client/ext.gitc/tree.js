@@ -481,10 +481,9 @@ module.exports = ext.register("ext/gitc/tree", {
         var gcc = require("ext/gitc/gitc").gitcCommands;
         var self = this;
         gcc.send("gitc_unstage " + chunk.file + " " + chunk.start + " " + chunk.length, function(output, parser) {
-            var afterChoose = self.$afterchoose.bind(self.getWorkingDirTree());
+            var afterChoose = self.$afterchoose.bind(self.getStageTree());
             self.refresh();
             afterChoose({}, true); // update editor
-            console.log(output.data);
         });
     },
 
@@ -492,10 +491,9 @@ module.exports = ext.register("ext/gitc/tree", {
         var gcc = require("ext/gitc/gitc").gitcCommands;
         var self = this;
         gcc.send("gitc_discard " + chunk.file + " " + chunk.start + " " + chunk.length, function(output, parser) {
-            var afterChoose = self.$afterchoose.bind(self.getStageTree());
+            var afterChoose = self.$afterchoose.bind(self.getWorkingDirTree());
             self.refresh();
             afterChoose({}, true); // update editor
-            console.log(output.data);
         });
     },
 

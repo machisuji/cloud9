@@ -190,3 +190,8 @@
 .stage-buttons a:hover {
   background-color: #BBBBAA;
 }
+
+.panel-label {
+  padding: 5px;
+  background-color: transparent;
+}

@@ -146,8 +146,8 @@
 .stage-buttons {
   position: absolute;
   left: 0px;
-  border: 2px solid #5555CC;
-  background: #AACCFF;
+  border: 2px solid #555544;
+  background: #CCCCBB;
   overflow: hidden;
   z-index: 1000;
   border-radius: 0px 15px 15px 0px;
@@ -188,5 +188,5 @@
 }
 
 .stage-buttons a:hover {
-  background-color: #99BBEE;
+  background-color: #BBBBAA;
 }

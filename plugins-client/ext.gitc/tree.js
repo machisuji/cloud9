@@ -178,7 +178,7 @@ module.exports = ext.register("ext/gitc/tree", {
         });
     },
 
-    showDiff: function showDiff(title, diff, ranges, lines, chunkIndices, update) {
+    showDiff: function showDiff(title, diff, ranges, lines, status, chunkIndices, update) {
         if (update === undefined) {
             update = false;
         }
@@ -193,7 +193,7 @@ module.exports = ext.register("ext/gitc/tree", {
         var node = apf.getXml('<file newfile="1" type="file" size="" changed="1" '
                 + 'name="' + title + ' diff" path="' + path + '" contenttype="text/plain; charset=utf-8" '
                 + 'modifieddate="" creationdate="" lockable="false" hidden="false" '
-                + 'executable="false"></file>');
+                + 'executable="false" status="' + status + '"></file>');
         var doc = ide.createDocument(node);
         doc.setValue(diff);
         doc.type = "diff";
@@ -209,7 +209,7 @@ module.exports = ext.register("ext/gitc/tree", {
 
             editor.getSession().setValue(diff);
             this.$afteropenfile({doc: doc, editor: editor})
-            this.$afterswitch({nextPage: {"$doc": doc}})
+            require("ext/gitc/gitc").gitEditorVis.updateLineNumbers(doc.lines, doc.chunkIndices);
         }
 
         return doc;
@@ -326,12 +326,11 @@ module.exports = ext.register("ext/gitc/tree", {
         this.updateStatus();
 
         diffFiles.addEventListener("afterchoose", this.$afterchoose = function(e, update) {
-            var node = this.selected;
+            var node = this.selected || e.selected;
             if (!node || node.tagName != "file" || this.selection.length > 1 ||
                 !ide.onLine && !ide.offlineFileSystemSupport) //ide.onLine can be removed after update apf
                     return;
 
-            var fileName = node.getAttribute("path");
             var staged = this.id == "stageFiles";
 
             var chunkIndices = function(chunks) {
@@ -347,12 +346,26 @@ module.exports = ext.register("ext/gitc/tree", {
                 return res.indices;
             };
 
+            var trimPath = function trimPath(dirtyPath) { // I'm not proud of all this
+                var path = dirtyPath;
+                if (path.indexOf("diff for staged ") == 0) {
+                    path = path.substring(16);
+                } else if (path.indexOf("diff for ") == 0) {
+                    path = path.substring(9);
+                }
+                return path;
+            };
+
+            var fileName = trimPath(node.getAttribute("path"));
+
             if (node.getAttribute("status") == "changed") {
                 var cmd = "git diff ";
                 if (staged) {
                     cmd += "--cached ";
                 }
-                gcc.send(cmd + node.getAttribute("path"), function(output, parser) {
+                var path = trimPath(node.getAttribute("path"));
+
+                gcc.send(cmd + path, function(output, parser) {
                     var result = parser.parseDiff(output.data, output.stream, true)[0];
                     var chunks = result.chunks;
                     var content = "";
@@ -425,27 +438,27 @@ module.exports = ext.register("ext/gitc/tree", {
                         }));
                     }), true /* flatten only one level */);
 
-                    _self.showDiff(fileName, content, ranges, lines, chunkIndices(chunks), update);
+                    _self.showDiff(fileName, content, ranges, lines, "changed", chunkIndices(chunks), update);
                 });
             } else if (node.getAttribute("status") == "added") {
                 var Range = require("ace/range").Range;
-                gcc.send("cat " + node.getAttribute("path"), function(output) {
+                gcc.send("cat " + trimPath(node.getAttribute("path")), function(output) {
                     var lines = output.data.split("\n");
                     var ranges = [["added", new Range(0, 0, lines.length, 10)]];
                     for (var i = 0; i < lines.length; ++i) {
                         lines[i] = "+" + lines[i];
                     }
-                    _self.showDiff(fileName, lines.join("\n"), ranges, undefined, []);
+                    _self.showDiff(fileName, lines.join("\n"), ranges, "added", undefined, []);
                 });
             } else if (node.getAttribute("status") == "removed") {
                 var Range = require("ace/range").Range;
-                gcc.send("git show HEAD:" + node.getAttribute("path"), function(output) {
+                gcc.send("git show HEAD:" + trimPath(node.getAttribute("path")), function(output) {
                     var lines = output.data.split("\n");
                     var ranges = [["deleted", new Range(0, 0, lines.length, 10)]];
                     for (var i = 0; i < lines.length; ++i) {
                         lines[i] = "-" + lines[i];
                     }
-                    _self.showDiff(fileName, lines.join("\n"), ranges, undefined, []);
+                    _self.showDiff(fileName, lines.join("\n"), ranges, "removed", undefined, []);
                 });
             }
         });

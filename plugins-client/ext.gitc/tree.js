@@ -538,13 +538,22 @@ module.exports = ext.register("ext/gitc/tree", {
                 var text = _self.getCommitMessageTextField();
                 var msg = text.getValue();
 
-                // commit
-                var gcc = require("ext/gitc/gitc").gitcCommands;
-                gcc.send("git commit -m \"" + msg + "\"", function(output, parser) {
-                    alert(output.data);
-                    text.setValue("");
-                    _self.refresh();
-                });
+                // @TODO multi line commit messages? Also: proper dialogs instead of alerts
+                if (msg.trim() == "") {
+                    alert("Please provide a commit message.");
+                } else {
+                    // commit
+                    var gcc = require("ext/gitc/gitc").gitcCommands;
+                    gcc.send("git commit -m \"" + msg + "\"", function(output, parser) {
+                        if (output.data.indexOf("no changes added to commit") != -1) {
+                            alert("Nothing to commit.");
+                        } else {
+                            alert(output.data);
+                            text.setValue("");
+                            _self.refresh();
+                        }
+                    });
+                }
             }
         });
 

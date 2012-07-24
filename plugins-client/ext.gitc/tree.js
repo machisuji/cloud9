@@ -282,24 +282,27 @@ module.exports = ext.register("ext/gitc/tree", {
         var _self = this;
         var gcc = require("ext/gitc/gitc").gitcCommands;
 
-        require("ext/gitc/gitc").gitcCommands.send("git status -s", function(output, parser) {
-            var st = parser.parseShortStatus(output.data, output.stream);
-            var workingDirModel = _self.createModel("Working Directory", st.working_dir.getAll());
-            var stageModel = _self.createModel("Stage", st.staging_area.getAll());
+        this.updateStatus = function updateStatus() {
+            require("ext/gitc/gitc").gitcCommands.send("git status -s", function(output, parser) {
+                var st = parser.parseShortStatus(output.data, output.stream);
+                var workingDirModel = _self.createModel("Working Directory", st.working_dir.getAll());
+                var stageModel = _self.createModel("Stage", st.staging_area.getAll());
 
-            diffFiles.getModel().load(workingDirModel);
-            stageFiles.getModel().load(stageModel);
-            if (this.loadedSettings === 1) {
-                var parentNode = diffFiles.queryNode("folder[@root=1]");
-                diffFiles.$setLoadStatus(parentNode, "loaded");
-                diffFiles.slideToggle(apf.xmldb.getHtmlNode(parentNode, diffFiles), 1, true, null, null);
+                diffFiles.getModel().load(workingDirModel);
+                stageFiles.getModel().load(stageModel);
+                if (this.loadedSettings === 1) {
+                    var parentNode = diffFiles.queryNode("folder[@root=1]");
+                    diffFiles.$setLoadStatus(parentNode, "loaded");
+                    diffFiles.slideToggle(apf.xmldb.getHtmlNode(parentNode, diffFiles), 1, true, null, null);
 
-                var stageRoot = stageFiles.queryNode("folder[@root=1]");
-                stageFiles.$setLoadStatus(stageRoot, "loaded");
-                stageFiles.slideToggle(apf.xmldb.getHtmlNode(stageRoot, stageFiles), 1, true, null, null);
-            }
-            _self.ready = true;
-        });
+                    var stageRoot = stageFiles.queryNode("folder[@root=1]");
+                    stageFiles.$setLoadStatus(stageRoot, "loaded");
+                    stageFiles.slideToggle(apf.xmldb.getHtmlNode(stageRoot, stageFiles), 1, true, null, null);
+                }
+                _self.ready = true;
+            });
+        };
+        this.updateStatus();
 
         diffFiles.addEventListener("afterchoose", this.$afterchoose = function() {
             var node = this.selected;
@@ -427,21 +430,27 @@ module.exports = ext.register("ext/gitc/tree", {
 
     stage : function(chunk) {
         var gcc = require("ext/gitc/gitc").gitcCommands;
+        var self = this;
         gcc.send("gitc_stage " + chunk.file + " " + chunk.start + " " + chunk.length, function(output, parser) {
+            self.refresh();
             console.log(output.data);
         });
     },
 
     unstage : function(chunk) {
         var gcc = require("ext/gitc/gitc").gitcCommands;
+        var self = this;
         gcc.send("gitc_unstage " + chunk.file + " " + chunk.start + " " + chunk.length, function(output, parser) {
+            self.refresh();
             console.log(output.data);
         });
     },
 
     discard : function(chunk) {
         var gcc = require("ext/gitc/gitc").gitcCommands;
+        var self = this;
         gcc.send("gitc_discard " + chunk.file + " " + chunk.start + " " + chunk.length, function(output, parser) {
+            self.refresh();
             console.log(output.data);
         });
     },
@@ -498,6 +507,13 @@ module.exports = ext.register("ext/gitc/tree", {
             beReady();
         };
         _self.getTree().addEventListener("focus", onFocus);
+    },
+
+    /**
+     * Called when the user hits the refresh button in the Project Files header
+     */
+    refresh : function() {
+        this.updateStatus();
     },
 
     $cancelWhenOffline : function() {

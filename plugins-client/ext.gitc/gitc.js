@@ -48,6 +48,10 @@ module.exports = ext.register("ext/gitc/gitc", {
         });
     },
 
+    foobar: function foobar() {
+        console.log("baz");
+    },
+
     disable : function(){
         this.nodes.each(function(item){
             item.disable();

@@ -551,7 +551,7 @@ module.exports = (function() {
             
             _.each(config.chunkIndices, function(chunk) {
                 if (chunk.start >= editor.renderer.getFirstVisibleRow()) {
-                    self.showGitButtons(chunk.start - editor.renderer.getFirstVisibleRow(), chunk);
+                    self.showGitButtons(chunk.start - editor.renderer.getFirstVisibleRow(), chunk, chunk.staged);
                 }
             });
         },
@@ -573,8 +573,10 @@ module.exports = (function() {
             }
         },
 
-        showGitButtons: function(row, chunk, forWorkingTree) {
-            forWorkingTree = forWorkingTree || true; // we're talking staged changes otherwise
+        showGitButtons: function(row, chunk, staged) {
+            if (staged === undefined) {
+                staged = false; // we're talking working dir changes otherwise
+            }
 
             var lines = document.getElementsByClassName("ace_layer ace_gutter-layer")[0].childNodes;
             var lineHeight = lines[row].clientHeight;
@@ -586,7 +588,7 @@ module.exports = (function() {
             icon.innerHTML = "&nbsp;";
             var content = elem("div", {class: "content"})
 
-            if (forWorkingTree) {
+            if (!staged) {
                 var stage = elem("a", {href:
                     "javascript: require('ext/gitc/tree').stage({file: '" + chunk.file + "', start: " + chunk.start +
                         ", length: " + chunk.length + "});"

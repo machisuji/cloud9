@@ -308,10 +308,13 @@ module.exports = ext.register("ext/gitc/tree", {
                     return;
 
             var fileName = node.getAttribute("path");
+            var staged = this.id == "stageFiles";
 
             var chunkIndices = function(chunks) {
                 var res = _.reduce(chunks, function(acc, chunk) {
-                    acc.indices.push({start: acc.lineCount, length: chunk.lines.length + 1, file: fileName});
+                    acc.indices.push({
+                        start: acc.lineCount, length: chunk.lines.length + 1, file: fileName, staged: staged
+                    });
                     acc.lineCount += chunk.lines.length + 1;
 
                     return acc;
@@ -418,6 +421,8 @@ module.exports = ext.register("ext/gitc/tree", {
                 });
             }
         });
+
+        stageFiles.addEventListener("afterchoose", this.$afterchoose);
     },
 
     stage : function(chunk) {

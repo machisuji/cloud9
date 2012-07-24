@@ -179,8 +179,16 @@ module.exports = ext.register("ext/gitc/tree", {
     },
 
     showDiff: function showDiff(title, diff, ranges, lines, chunkIndices) {
+        var staged = false;
+        var path = "diff for ";
+        if (chunkIndices.length > 0 && chunkIndices[0].staged) {
+            staged = chunkIndices[0].staged;
+            path += "staged ";
+        }
+        path += title;
+
         var node = apf.getXml('<file newfile="1" type="file" size="" changed="1" '
-                + 'name="' + title + ' diff" path="diff for ' + title + '" contenttype="text/plain; charset=utf-8" '
+                + 'name="' + title + ' diff" path="' + path + '" contenttype="text/plain; charset=utf-8" '
                 + 'modifieddate="" creationdate="" lockable="false" hidden="false" '
                 + 'executable="false"></file>');
         var doc = ide.createDocument(node);

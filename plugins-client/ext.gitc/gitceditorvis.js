@@ -406,13 +406,61 @@ module.exports = (function() {
 				}
             }
         },
+
+        isChangeAnnotation : function(annotation, filename) {
+            var key = annotation.row.toString();
+            var other = this.annotations[filename][key];
+            return other && 
+                (annotation.type == "deleted" && other.type == "added" || 
+                annotation.type == "added" && other.type == "deleted");
+        },
+
+        addMissingDecoration : function() {
+            var gutterCells = document.getElementsByClassName('ace_gutter-cell');
+            var firstLineIndex = this.currentEditor.renderer.getFirstVisibleRow();
+            for (var i = 0; i < gutterCells.length; i++) {
+				if (this.annotations[this.currentFile].staged) {
+					var stagedAnnotation = this.annotations[this.currentFile].staged[(firstLineIndex+i).toString()];
+					this.addMissingDeletedDecoration(stagedAnnotation, gutterCells[i]);
+				}
+                
+				if (this.annotations[this.currentFile].unstaged) {
+					var unstagedAnnotation = this.annotations[this.currentFile].unstaged[(firstLineIndex+i).toString()];
+					this.addMissingDeletedDecoration(unstagedAnnotation, gutterCells[i]);
+				}
+            }
+        },
+
+		addMissingDeletedDecoration : function(annotation, cell) {
+			if (!annotation)
+				return;
+			
+			//add deleted line marker, if not at start of visible gutter area (otherwise, marker would not be visible anyway)
+            if (annotation.type == "deleted" && cell.previousSibling != undefined) {
+                var marker = document.createElement('div');
+                marker.classList.add("ace_gutter-cell");
+                marker.classList.add("gitc-removed");
+                marker.setAttribute("style", "height: 2px");
+
+                cell.setAttribute("style", "height: 15px");
+                cell.previousSibling.setAttribute("style", "height: 15px");
+                cell.parentNode.insertBefore(marker, cell);
+                cell = marker;
+            }
+
+            //add tooltip
+            if (annotation.tooltip) {
+                cell.appendChild(annotation.tooltip);
+            }
+		},
         
-        updateLineNumbers : function(lines) {
+        updateLineNumbers : function(lines, chunkIndices) {
             var firstLineIndex = this.currentEditor.renderer.getFirstVisibleRow();
             var lastLineIndex  = this.currentEditor.renderer.getLastVisibleRow();
             var self = this;
             var fun = function() {
-                self.currentEditor.renderer.$gutterLayer.update({lines: lines, override: true});
+                self.currentEditor.renderer.$gutterLayer.update({
+                    lines: lines, chunkIndices: chunkIndices, override: true});
             };
             if (lines) {
                 setTimeout(fun, 0);
@@ -425,20 +473,24 @@ module.exports = (function() {
         customUpdate: function(config) {
             if (config.reset === true) {
                 this.lines = undefined;
+                this.chunkIndices = undefined;
             }
 
             if (config.lines && config.override === true) {
                 this.lines = config.lines;
+                this.chunkIndices = config.chunkIndices;
             } else if (this.lines) {
                 this.$config = config;
                 config.lines = this.lines;
+                config.chunkIndices = this.chunkIndices;
             } else if (config.lastRow !== undefined) {
                 return this.$originalUpdate(config);
             } else {
                 throw ("Invalid State: neither lines nor start or end rows given (config: " +
                     config + ")");
             }
-            var editor = require("ext/gitc/gitc").gitEditorVis.currentEditor;
+            var self = require("ext/gitc/gitc").gitEditorVis;
+            var editor = self.currentEditor;
             var dom = require("ace/lib/dom");
             var oop = require("ace/lib/oop");
             var EventEmitter = require("ace/lib/event_emitter").EventEmitter;
@@ -496,6 +548,12 @@ module.exports = (function() {
                 this.gutterWidth = gutterWidth;
                 this._emit("changeGutterWidth", gutterWidth);
             }
+            
+            _.each(config.chunkIndices, function(chunk) {
+                if (chunk.start >= editor.renderer.getFirstVisibleRow()) {
+                    self.showGitButtons(chunk.start - editor.renderer.getFirstVisibleRow(), chunk);
+                }
+            });
         },
 
         setGutterUpdateFunction : function(opened_file, editor) {
@@ -515,16 +573,24 @@ module.exports = (function() {
             }
         },
 
-        showGitButtons: function(row) {
+        showGitButtons: function(row, chunk) {
             var lines = document.getElementsByClassName("ace_layer ace_gutter-layer")[0].childNodes;
             var lineHeight = lines[row].clientHeight;
             var div = elem("div", {
                 style: "top: " + (lineHeight * row) + "px;",
                 class: "stage-buttons"});
-            var stage = elem("a", {href: "#"});
+            var stage = elem("a", {href:
+                "javascript: require('ext/gitc/tree').stage({file: '" + chunk.file + "', start: " + chunk.start +
+                    ", length: " + chunk.length + "});"
+            });
             stage.innerHTML = "Stage";
-            var discard = elem("a", {href: "#"});
+
+            var discard = elem("a", {href:
+                "javascript: require('ext/gitc/tree').unstage({file: '" + chunk.file + "', start: " + chunk.start +
+                    ", length: " + chunk.length + "});"
+            });
             discard.innerHTML = "Discard";
+
             var icon = elem("div", {class: "spacer"});
             icon.innerHTML = "&nbsp;";
             var content = elem("div", {class: "content"})

@@ -105,9 +105,20 @@ util.inherits(GitcPlugin, Plugin);
             }
         }
 
+        var finalCmd = args[0];
+        var finalArgs = args.slice(1);
+
+        if (args[0] == "gitc_diff") {
+            finalCmd = "./plugins-server/cloud9.ide.gitc/git_diff.sh"
+        } else if (args[0] == "gitc_stage") {
+            finalCmd = "./plugins-server/cloud9.ide.gitc/git_stage.sh"
+        } else if (args[0] == "gitc_unstage") {
+            finalCmd = "./plugins-server/cloud9.ide.gitc/gitc_unstage.sh"
+        }
+
         this.pm.spawn("shell", {
-            command: args[0],
-            args: args.slice(1),
+            command: finalCmd,
+            args: finalArgs,
             cwd: message.cwd,
             env: this.gitEnv,
             extra: message.extra

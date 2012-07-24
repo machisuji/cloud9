@@ -174,11 +174,11 @@ module.exports = ext.register("ext/gitc/tree", {
 
         tabEditors.addEventListener("afterswitch", function(e) {
             var doc = e.nextPage.$doc;
-            require("ext/gitc/gitc").gitEditorVis.updateLineNumbers(doc.lines);
+            require("ext/gitc/gitc").gitEditorVis.updateLineNumbers(doc.lines, doc.chunkIndices);
         });
     },
 
-    showDiff: function showDiff(title, diff, ranges, lines) {
+    showDiff: function showDiff(title, diff, ranges, lines, chunkIndices) {
         var node = apf.getXml('<file newfile="1" type="file" size="" changed="1" '
                 + 'name="' + title + ' diff" path="diff for ' + title + '" contenttype="text/plain; charset=utf-8" '
                 + 'modifieddate="" creationdate="" lockable="false" hidden="false" '
@@ -188,6 +188,7 @@ module.exports = ext.register("ext/gitc/tree", {
         doc.type = "diff";
         doc.ranges = ranges;
         doc.lines = lines;
+        doc.chunkIndices = chunkIndices;
         ide.dispatchEvent("openfile", {doc: doc, type: "newfile"});
 
         return doc;
@@ -306,6 +307,19 @@ module.exports = ext.register("ext/gitc/tree", {
                 !ide.onLine && !ide.offlineFileSystemSupport) //ide.onLine can be removed after update apf
                     return;
 
+            var fileName = node.getAttribute("path");
+
+            var chunkIndices = function(chunks) {
+                var res = _.reduce(chunks, function(acc, chunk) {
+                    acc.indices.push({start: acc.lineCount, length: chunk.lines.length + 1, file: fileName});
+                    acc.lineCount += chunk.lines.length + 1;
+
+                    return acc;
+                }, {indices: [], lineCount: 0});
+
+                return res.indices;
+            };
+
             if (node.getAttribute("status") == "changed") {
                 gcc.send("git diff " + node.getAttribute("path"), function(output, parser) {
                     var result = parser.parseDiff(output.data, output.stream, true)[0];
@@ -380,7 +394,7 @@ module.exports = ext.register("ext/gitc/tree", {
                         }));
                     }), true /* flatten only one level */);
 
-                    _self.showDiff(node.getAttribute("path"), content, ranges, lines);
+                    _self.showDiff(fileName, content, ranges, lines, chunkIndices(chunks));
                 });
             } else if (node.getAttribute("status") == "added") {
                 var Range = require("ace/range").Range;
@@ -390,7 +404,7 @@ module.exports = ext.register("ext/gitc/tree", {
                     for (var i = 0; i < lines.length; ++i) {
                         lines[i] = "+" + lines[i];
                     }
-                    _self.showDiff(node.getAttribute("path"), lines.join("\n"), ranges);
+                    _self.showDiff(fileName, lines.join("\n"), ranges, undefined, []);
                 });
             } else if (node.getAttribute("status") == "removed") {
                 var Range = require("ace/range").Range;
@@ -400,9 +414,23 @@ module.exports = ext.register("ext/gitc/tree", {
                     for (var i = 0; i < lines.length; ++i) {
                         lines[i] = "-" + lines[i];
                     }
-                    _self.showDiff(node.getAttribute("path"), lines.join("\n"), ranges);
+                    _self.showDiff(fileName, lines.join("\n"), ranges, undefined, []);
                 });
             }
+        });
+    },
+
+    stage : function(chunk) {
+        var gcc = require("ext/gitc/gitc").gitcCommands;
+        gcc.send("gitc_stage " + chunk.file + " " + chunk.start + " " + chunk.length, function(output, parser) {
+            console.log(output.data);
+        });
+    },
+
+    unstage : function(chunk) {
+        var gcc = require("ext/gitc/gitc").gitcCommands;
+        gcc.send("gitc_unstage " + chunk.file + " " + chunk.start + " " + chunk.length, function(output, parser) {
+            console.log(output.data);
         });
     },
 

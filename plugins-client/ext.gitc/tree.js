@@ -309,6 +309,9 @@ module.exports = ext.register("ext/gitc/tree", {
                 var workingDirModel = _self.createModel("Working Directory", st.working_dir.getAll());
                 var stageModel = _self.createModel("Stage", st.staging_area.getAll());
 
+                var selectedDiff = diffFiles.selected;
+                var selectedStage = stageFiles.selected;
+
                 diffFiles.getModel().load(workingDirModel);
                 stageFiles.getModel().load(stageModel);
                 if (this.loadedSettings === 1) {
@@ -321,6 +324,24 @@ module.exports = ext.register("ext/gitc/tree", {
                     stageFiles.slideToggle(apf.xmldb.getHtmlNode(stageRoot, stageFiles), 1, true, null, null);
                 }
                 _self.ready = true;
+
+                // @TODO refactor into function
+                if (selectedDiff) {
+                    var xmlNode = diffFiles.$model.queryNode('//node()[@path="' +
+                        selectedDiff.getAttribute("path") + '" and @type="' +
+                        selectedDiff.getAttribute("type") + '"]');
+                    if (xmlNode) {
+                        diffFiles.select(xmlNode);
+                    }
+                }
+                if (selectedStage) {
+                    var xmlNode = stageFiles.$model.queryNode('//node()[@path="' +
+                        selectedStage.getAttribute("path") + '" and @type="' +
+                        selectedStage.getAttribute("type") + '"]');
+                    if (xmlNode) {
+                        stageFiles.select(xmlNode);
+                    }
+                }
             });
         };
         this.updateStatus();

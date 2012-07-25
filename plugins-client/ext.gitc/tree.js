@@ -452,7 +452,7 @@ module.exports = ext.register("ext/gitc/tree", {
                         right = getGutterNumber(right);
                         return "<div style='width:100%'>" +
                                "<div style='width:50%;text-align:center;position:relative;display:inline;'>" +
-                                        left + "</div>" +
+                                        left + " </div>" +
                                "<div style='width:50%;text-align:center;position:relative;display:inline;border-left:1px solid black'>" +
                                         right + "</div>" +
                                "</div>"

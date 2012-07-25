@@ -564,7 +564,7 @@ module.exports = ext.register("ext/gitc/tree", {
         var path = selected.getAttribute("path");
         var self = this;
 
-        gcc.send("git reset --hard " + path, function(output, parser) {
+        gcc.send("git checkout " + path, function(output, parser) {
             if (output.stream != "stderr") { // discarded successfully
                 self.refresh();
             } else {

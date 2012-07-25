@@ -190,8 +190,10 @@ module.exports = ext.register("ext/gitc/tree", {
         }
         path += title;
 
+        var fileName = title.substring(title.lastIndexOf("/") + 1);
+
         var node = apf.getXml('<file newfile="1" type="file" size="" changed="1" '
-                + 'name="' + title + ' diff" path="' + path + '" contenttype="text/plain; charset=utf-8" '
+                + 'name="' + fileName + '.diff" path="' + path + '" contenttype="text/plain; charset=utf-8" '
                 + 'modifieddate="" creationdate="" lockable="false" hidden="false" '
                 + 'executable="false" status="' + status + '"></file>');
         var doc = ide.createDocument(node);

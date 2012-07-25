@@ -1,7 +1,7 @@
 /**
  * Gitc extension for the Cloud9 IDE client
  *
- * @copyright 2012
+ * @copyright 2012 Markus Kahl, Stephanie Platz, Patrick Schilf
  * @license GPLv3 <http://www.gnu.org/licenses/gpl.txt>
  */
 

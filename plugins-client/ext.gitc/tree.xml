@@ -25,7 +25,8 @@
         <!--a:button skin="header-btn" icon="order.png" top="-22" right="7"></a:button-->
         
         <a:menu id="mnuGitcSettings">
-            <a:item onclick="require('ext/gitc/tree').refresh()">Refresh Status</a:item>
+            <a:item onclick="require('ext/gitc/tree').pull()">Pull</a:item>
+            <a:item onclick="require('ext/gitc/tree').push()">Push</a:item>
             <a:divider />
         </a:menu>
 

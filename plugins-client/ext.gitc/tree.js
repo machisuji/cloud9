@@ -573,6 +573,32 @@ module.exports = ext.register("ext/gitc/tree", {
         });
     },
 
+    pull: function() {
+        var gcc = require("ext/gitc/gitc").gitcCommands;
+        var self = this;
+
+        gcc.send("git pull", function(output) {
+            if (output.stream != "stderr") {
+                self.refresh();
+            } else {
+                alert(output.data);
+            }
+        });
+    },
+
+    push: function() {
+        var gcc = require("ext/gitc/gitc").gitcCommands;
+        var self = this;
+
+        gcc.send("git push", function(output) {
+            if (output.stream != "stderr") {
+                alert("Changes pushed.");
+            } else {
+                alert(output.data);
+            }
+        });
+    },
+
     init : function() {
         var _self = this;
 
@@ -614,27 +640,6 @@ module.exports = ext.register("ext/gitc/tree", {
             diffFiles.selectable = true;
             stageFiles.selectable = true;
         })
-
-        // This adds a "Show Hidden Files" item to the settings dropdown
-        // from the Project Files header
-        mnuGitcSettings.appendChild(new apf.item({
-            id      : "mnuitemHiddenFiles",
-            type    : "check",
-            caption : "Show Hidden Files",
-            visible : "{diffFiles.visible}",
-            checked : "[{require('core/settings').model}::auto/difftree/@showhidden]",
-            onclick : function(e){
-                setTimeout(function() {
-                    _self.changed = true;
-                    settings.save();
-                    
-                    (davProject.realWebdav || davProject)
-                        .setAttribute("showhidden", e.currentTarget.checked);
-
-                    _self.refresh();
-                });
-            }
-        }));
 
         var onFocus = function onFocus() {
             var beReady = function beReady() {

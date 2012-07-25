@@ -35,7 +35,7 @@
             </a:model>
 
             <a:tree id="diffFiles" canrename="false" border="0" simpledata="true" model="diffModel"
-              contextmenu="mnuCtxTree" multiselect="true" reselectable="true"
+              contextmenu="diffContextMenu" multiselect="true" reselectable="true"
               onbeforeremove="return require('core/util').removeInteractive(this)"
               onbeforemove="this.disable();" 
               flex="1" scrollbar="sbShared 2 2 2"
@@ -82,7 +82,7 @@
             </a:model>
 
             <a:tree id="stageFiles" canrename="false" border="0" simpledata="true" model="stageModel"
-              contextmenu="mnuCtxTree" multiselect="true" reselectable="true"
+              contextmenu="stageContextMenu" multiselect="true" reselectable="true"
               onbeforeremove="return require('core/util').removeInteractive(this)"
               onbeforemove="this.disable();" 
               flex="1" scrollbar="sbShared 2 2 2"
@@ -126,25 +126,12 @@
             <a:button id="commit-button" caption="Commit" class="id-commit-button" />
         </a:vbox>
         
-        <a:menu id="mnuCtxTree" disabled="{{!stServerConnected.active}}" render="runtime">
-            <a:item match="[file]" class="strong"  onclick="
-                require('core/ide').dispatchEvent('openfile', {doc: require('core/ide').createDocument(apf.activeElement.selected)})
-            ">Edit</a:item>
-            <a:divider />
-            <a:item onclick="require('ext/gitc/tree').refresh()">Refresh</a:item>
-            <a:item match="[file|folder[not(@root)]]" onclick="apf.activeElement.startRename()">Rename</a:item>
-            <a:item match="[file|folder[not(@root)]]" onclick="apf.activeElement.remove()">Delete</a:item>
-            <a:divider />
-            <a:item match="[file|folder[not(@root)]]" command="cut">Cut</a:item>
-            <a:item match="[file|folder[not(@root)]]" command="copy">Copy</a:item>
-            <a:item match="[file|folder|project]" disabled="{apf.clipboard.empty}" command="paste">Paste</a:item>
-            <a:divider />
-            <a:item id="itemCtxTreeNewFile" match="[file|folder|project]" onclick="
-                require('ext/filesystem/filesystem').createFile();
-            ">New File</a:item>
-            <a:item match="[file|folder|project]" onclick="
-                require('ext/filesystem/filesystem').createFolder();
-            ">New Folder</a:item>
+        <a:menu id="diffContextMenu" disabled="{{!stServerConnected.active}}" render="runtime">
+            <a:item match="[file]" onclick="require('ext/gitc/tree').stageSelectedFile()">Stage</a:item>
+            <a:item match="[file]" onclick="require('ext/gitc/tree').discardSelectedFile()">Discard</a:item>
+        </a:menu>
+        <a:menu id="stageContextMenu" disabled="{{!stServerConnected.active}}" render="runtime">
+            <a:item match="[file]" onclick="require('ext/gitc/tree').unstageSelectedFile()">Unstage</a:item>
         </a:menu>
     </a:window>
 </a:application>

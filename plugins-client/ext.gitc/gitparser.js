@@ -1,5 +1,5 @@
 /**
- * TODO
+ * TODO What exactly?
  * 
  * @license GPLv3 <http://www.gnu.org/licenses/gpl.txt>
  */
@@ -17,6 +17,8 @@ module.exports = (function() {
         /*
          * Returns the changed files found in the output of the 'git status -s' 
          * command and returns the changed files.
+         *
+         * Blah bla blah
          */
         parseShortStatus : function(status, stream, callback) {
 
@@ -116,7 +118,6 @@ module.exports = (function() {
                 return files;
             }
 
-            //separate diff for each contained file
             diff = "\n" + diff;
             var diffs = diff.split("\ndiff --git");
             diffs.shift(); // Omit leading empty field

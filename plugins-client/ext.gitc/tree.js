@@ -593,11 +593,9 @@ module.exports = ext.register("ext/gitc/tree", {
         gcc.send("git push", function(output) {
             if (output.stream != "stderr") {
                 alert("Changes pushed.");
-                refresh();
             } else {
                 if (output.data.toLowerCase().indexOf("to") == 0) {
                     alert("Pushed " + output.data);
-                    refresh();
                 } else {
                     alert(output.data);
                 }

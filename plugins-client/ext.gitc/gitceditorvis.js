@@ -96,14 +96,7 @@ module.exports = (function() {
             this.all_changes[this.currentFile] = undefined;
             //first write new file content
             var file_content = this.currentEditor.getSession().getValue();
-            this.gitcCommands.send(
-                "gitcdiff writefile " + this.currentFile,
-                function(output){ //then execute diff
-                    if(output.stream === "stdout" & output.data.indexOf(success_msg) === 0) {
-                        this.gitcCommands.send("gitcdiff -U0 " + this.currentFile,
-                                               this.addChanges.bind(this));
-                    }
-                }.bind(this),
+            this.gitcCommands.send("gitcdiff " + this.currentFile, this.addChanges.bind(this),
                 {new_file_content: file_content, success: success_msg});
 
             this.gitcCommands.send("git diff --cached -U0 " + this.currentFile, this.addChanges.bind(this));

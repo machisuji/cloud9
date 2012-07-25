@@ -580,6 +580,9 @@ module.exports = ext.register("ext/gitc/tree", {
         gcc.send("git pull", function(output) {
             if (output.stream != "stderr") {
                 self.refresh();
+                if (output.data != "") {
+                    alert(output.data);
+                }
             } else {
                 alert(output.data);
             }

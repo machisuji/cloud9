@@ -1,3 +1,5 @@
+## This branch is for the screencast so that I can commit und push things and stuff.
+
 **UPDATE for May 2012**: If you cloned Cloud9 prior to May 2012, we have upgraded the
 architecture of the codebase. This makes it simpler to maintain Cloud9, but
 it affects the way you pull updates and hack on subcomponents. See the _Installation and Usage_

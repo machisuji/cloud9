@@ -502,15 +502,9 @@ module.exports = (function() {
                     fold = this.session.getNextFoldLine(i, fold);
                     foldStart = fold ?fold.start.row :Infinity;
                 }
-
-                var annotation = this.$annotations[i] || emptyAnno;
                 var lineNumber = current_lines[i];
 
                 html.push("<div class='ace_gutter-cell",
-                    this.$decorations[i] || "",
-                    this.$breakpoints[i] ? " ace_breakpoint " : " ",
-                    annotation.className,
-                    "' title='", annotation.text.join("\n"),
                     "' style='height:", config.lineHeight, "px;'>", lineNumber);
 
                 if (foldWidgets) {

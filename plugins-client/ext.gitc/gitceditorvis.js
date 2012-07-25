@@ -162,6 +162,7 @@ module.exports = (function() {
                 return this.createAnnotation(line+1, "deleted", chunk, msg, status);
             } else if (annotation.type == "added") {
                 annotation.type = "changed";
+                annotation.text = msg;
                 return annotation;
             } else if (annotation.type == "changed") {
                 return this.createDeletedAnnotation(line+1, chunk, msg, status, filename)
@@ -298,11 +299,10 @@ module.exports = (function() {
 
 				if (this.current_annotations[this.currentFile].staged) {
 					var stagedAnnotation = this.current_annotations[this.currentFile].staged[row.toString()];
-					if (stagedAnnotation) {
+					if (stagedAnnotation && stagedAnnotation.type != "added") {
 						var stagedDiv = document.createElement('div');
 						stagedDiv.className = "staged-" + stagedAnnotation.type;
-                        //Blub
-						
+                        
 						var stagedText = stagedAnnotation.text;
 						var prevRow = row-1;
 						var prevAnnotation = this.current_annotations[this.currentFile].staged[prevRow.toString()];
@@ -330,7 +330,7 @@ module.exports = (function() {
 				
 				if (this.current_annotations[this.currentFile].unstaged) {
 					var unstagedAnnotation = this.current_annotations[this.currentFile].unstaged[row.toString()];
-					if (unstagedAnnotation) {
+					if (unstagedAnnotation && unstagedAnnotation.type != "added") {
 						var unstagedDiv = document.createElement('div');
 						unstagedDiv.className = "unstaged-" + unstagedAnnotation.type;
 						

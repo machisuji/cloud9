@@ -528,6 +528,51 @@ module.exports = ext.register("ext/gitc/tree", {
         });
     },
 
+    stageSelectedFile: function() {
+        var gcc = require("ext/gitc/gitc").gitcCommands;
+        var selected = diffFiles.selected;
+        var path = selected.getAttribute("path");
+        var self = this;
+
+        gcc.send("git add " + path, function(output, parser) {
+            if (output.data == "") { // staged successfully
+                self.refresh();
+            } else {
+                alert(output.data);
+            }
+        });
+    },
+
+    unstageSelectedFile: function() {
+        var gcc = require("ext/gitc/gitc").gitcCommands;
+        var selected = stageFiles.selected;
+        var path = selected.getAttribute("path");
+        var self = this;
+
+        gcc.send("git reset " + path, function(output, parser) {
+            if (output.stream != "stderr") { // unstaged successfully
+                self.refresh();
+            } else {
+                alert(output.data);
+            }
+        });
+    },
+
+    discardSelectedFile: function() {
+        var gcc = require("ext/gitc/gitc").gitcCommands;
+        var selected = diffFiles.selected;
+        var path = selected.getAttribute("path");
+        var self = this;
+
+        gcc.send("git reset --hard " + path, function(output, parser) {
+            if (output.stream != "stderr") { // discarded successfully
+                self.refresh();
+            } else {
+                alert(output.data);
+            }
+        });
+    },
+
     init : function() {
         var _self = this;
 

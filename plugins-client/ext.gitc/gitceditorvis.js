@@ -6,6 +6,7 @@
 
 define(function(require, exports, module) {
 var Range = require("ace/range").Range;
+var Annotation = require("ext/gitc/annotation");
 
 /**
  * Creates a new DOM Element.
@@ -69,7 +70,7 @@ module.exports = (function() {
                     // fetch change information fetch
                     this.gitcCommands.send("git diff -U0 " + this.currentFile, this.addChanges.bind(this));
                     this.gitcCommands.send("git diff --cached -U0 " + this.currentFile, this.addChanges.bind(this));
-                    //register on editor evetns (TODO: but only once)
+                    //register on editor events FIXME: this is done more than once :(
                     this.currentEditor.on("mousemove", this.onMouseMove.bind(this));
                     this.currentEditor.on("change", this.onEditorChange.bind(this));
                 }
@@ -143,29 +144,17 @@ module.exports = (function() {
             };
         },
         
-        createAnnotation : function(line, type, chunk, msg, status) {
-          var annotation = {
-            row: line,
-            type: type,
-            chunk: chunk,
-            text: msg,
-            status: status,
-            tooltip: undefined
-          };
-          
-          return annotation;
-        },
-        
-        createDeletedAnnotation : function(line, chunk, msg, status, filename) {
+        createAnnotation : function(line, chunk, msg, status, filename) {
             var annotation = this.new_annotations[filename][status][line];
             if (!annotation) {
-                return this.createAnnotation(line+1, "deleted", chunk, msg, status);
+                return new Annotation(line+1, "deleted", chunk, msg, status);
             } else if (annotation.type == "added") {
+                
                 annotation.type = "changed";
                 annotation.text = msg;
                 return annotation;
             } else if (annotation.type == "changed") {
-                return this.createDeletedAnnotation(line+1, chunk, msg, status, filename)
+                return this.createAnnotation(line+1, chunk, msg, status, filename)
             } else if (annotation.type == "deleted") {
                 annotation.text += ("\n" + msg);
                 return annotation;
@@ -380,7 +369,7 @@ module.exports = (function() {
     				for (var j = 0; j < chunk.lines.length; j++) {
     					var line = chunk.lines[j];
                         if (line.status == "added") {
-                            var annotation = this.createAnnotation(line.number_new-1, line.status, chunk, line.content, status);
+                            var annotation = new Annotation(line.number_new-1, line.status, chunk, line.content, status);
                             this.new_annotations[filename][status][annotation.row.toString()] = annotation;
                         } else if (line.status == "deleted"){
 							var k = -1;
@@ -393,7 +382,7 @@ module.exports = (function() {
 				for (var i = 0; i < deletedLines.length; i++) {
 					var line = deletedLines[i];
                     if (line.status == "deleted") {
-                        var annotation = this.createDeletedAnnotation(line.number_new-1, chunk, line.content, status, filename);
+                        var annotation = this.createAnnotation(line.number_new-1, chunk, line.content, status, filename);
                         this.new_annotations[filename][status][annotation.row.toString()] = annotation;
                     }
 				}
